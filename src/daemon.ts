@@ -112,19 +112,19 @@ function cryptoRandom(): string {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
 
-export type ShowParams = { html: string; title?: string };
+export type WriteParams = { html: string; title?: string };
 
 export function registerDocketHandlers(
   daemon: Pick<Daemon, "onRequest">,
   docket: Docket,
 ) {
-  daemon.onRequest("show", async (params) => {
-    const p = params as Partial<ShowParams> | null;
+  daemon.onRequest("write", async (params) => {
+    const p = params as Partial<WriteParams> | null;
     if (!p || typeof p.html !== "string") {
-      throw new Error("show: 'html' must be a string");
+      throw new Error("write: 'html' must be a string");
     }
     if (p.title !== undefined && typeof p.title !== "string") {
-      throw new Error("show: 'title' must be a string when provided");
+      throw new Error("write: 'title' must be a string when provided");
     }
     await docket.show(p.html, p.title);
     return { ok: true };

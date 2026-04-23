@@ -17,13 +17,13 @@ The surface is a canvas: whatever HTML a client passes is what shows. There is n
 
 ```
 adapter (src/adapter.ts)
-  ├─ MCP tool set_docket  ──▶ daemon.request("show", {html, title?})
-  └─ MCP tool hide_docket ──▶ daemon.request("hide", {})
+  ├─ MCP tool write_docket ──▶ daemon.request("write", {html, title?})
+  └─ MCP tool hide_docket  ──▶ daemon.request("hide", {})
                                     │
                                     ▼
 daemon (src/daemon.ts) registers:
-  onRequest("show", ...) ──┐
-  onRequest("hide", ...) ──┤──▶ docket (src/docket.ts)
+  onRequest("write", ...) ──┐
+  onRequest("hide", ...)  ──┤──▶ docket (src/docket.ts)
                            │       ├─ glimpseui window (singleton)
   on startup (hudMode=always):     ├─ show(html, title?)
     docket.show(placeholderHTML)   └─ hide()
@@ -36,14 +36,14 @@ daemon (src/daemon.ts) registers:
 ## 3. Current state (what exists vs. what lands here)
 
 Already on `main`:
-- `adapter.ts` exports `registerDocketShow(mcp, daemon)` — the MCP tool `docket_show({html, title})` forwards to `daemon.request("show", …)`.
-- `daemon.ts` exports `registerShowHandler(daemon)` — validates `{html, title}` payload and acks with `{ok:true}` but does **not** drive any UI yet (comment: "Daemon→glimpse wiring lands in a later change"). Registered in `runDaemonMain`.
+- `adapter.ts` exports `registerDocketTools(mcp, daemon)` — the MCP tools `write_docket({html, title})` and `hide_docket({})` forward to `daemon.request("write", …)` / `daemon.request("hide", …)`.
+- `daemon.ts` exports `registerDocketHandlers(daemon, docket)` — validates `{html, title}` payload and drives the `Docket`. Registered in `runDaemonMain`.
 - `test/adapter-daemon.test.ts` covers payload validation on `show`.
 - `test/e2e.test.ts` covers MCP tool surface for `docket_show`.
 
 This task:
-- Renames `docket_show` → `set_docket` and `registerDocketShow` → `registerDocketTools`; adds `hide_docket` tool.
-- Renames `registerShowHandler` → `registerDocketHandlers(daemon, docket)`; keeps payload validation, now drives a real `Docket`.
+- Renames `docket_show` → `write_docket` and `registerDocketShow` → `registerDocketTools`; adds `hide_docket` tool. (Note: this spec's rename of the MCP tool has since been consolidated to `write_docket` directly to match the `Read`/`Write`/`Edit` idiom — see [`2026-04-23-docket-read-edit-tools.md`](./2026-04-23-docket-read-edit-tools.md).)
+- Renames `registerShowHandler` → `registerDocketHandlers(daemon, docket)`; keeps payload validation, now drives a real `Docket`. Internal RPC name is `"write"` (not `"show"`) for symmetry with `read` / `edit` / `hide`.
 - Adds `src/docket.ts` (the glimpseui-owning module).
 - Updates `paths.ts` for `CLAWD_DOCKLET_HUD_MODE`.
 - Drops the leftover `ping` stub in `runDaemonMain` (no longer a placeholder; real handlers are registered).
@@ -55,16 +55,16 @@ Registration lives in `adapter.ts` under `registerDocketTools(mcp, daemon)`:
 
 | Tool         | Input schema                              | Daemon RPC                       | Return                                |
 |--------------|-------------------------------------------|----------------------------------|---------------------------------------|
-| `set_docket` | `{ html: string, title?: string }`        | `show({html, title})`            | `{content:[{type:"text", text:"ok"}]}` |
+| `write_docket` | `{ html: string, title?: string }`        | `write({html, title})`           | `{content:[{type:"text", text:"ok"}]}` |
 | `hide_docket`| `{}`                                      | `hide({})`                       | same                                   |
 
-`set_docket`:
-- **title:** "Set HTML in Docklet HUD"
+`write_docket`:
+- **title:** "Write HTML to the Docklet HUD"
 - **description:** "Render the given HTML in the shared Docklet HUD window (top-right of the screen, frameless, transparent, clickthrough). Multiple MCP clients share a single window owned by the daemon; each call replaces the previous HTML."
 
 `hide_docket`:
 - **title:** "Hide the Docklet HUD"
-- **description:** "Close the shared Docklet HUD window. A subsequent `set_docket` will reopen it."
+- **description:** "Close the shared Docklet HUD window. A subsequent `write_docket` will reopen it."
 
 No `eval_hud_js` in this scope — deferred until a real client needs incremental updates.
 
@@ -126,7 +126,7 @@ Updates after open use the `GlimpseWindow.setHTML(html)` method (which triggers 
 
 New env var in `paths.ts`: `CLAWD_DOCKLET_HUD_MODE` ∈ {`always`, `lazy`}, default `always`.
 
-| Mode     | On daemon startup              | On `set_docket`                  | On `hide_docket`         |
+| Mode     | On daemon startup              | On `write_docket`                  | On `hide_docket`         |
 |----------|--------------------------------|----------------------------------|--------------------------|
 | `always` | Probe → open window with placeholder HTML | Update HTML in existing window; reopen if closed | Close window              |
 | `lazy`   | Do nothing (no probe, no window)          | Probe on first call, then open & set HTML; update on subsequent calls | Close window               |
@@ -139,7 +139,7 @@ Screen-dim probe result is cached on the `Docket` instance. If the first probe f
 
 ## 8. Placeholder HTML (native-mac feel)
 
-Shown in `always` mode at daemon startup and whenever `set_docket` has never been called.
+Shown in `always` mode at daemon startup and whenever `write_docket` has never been called.
 
 ```html
 <!doctype html>
@@ -168,14 +168,14 @@ Small pill, backdrop-blur, system fonts, a green status dot. Adapts to dark/ligh
 src/
 ├── docket.ts      (new)     Docket module: probe, open, setHTML, close. No MCP imports.
 ├── daemon.ts      (modified) Instantiate Docket; register show/hide handlers; honor hudMode on startup.
-├── adapter.ts     (modified) registerDocketTools(mcp, daemon): set_docket + hide_docket.
+├── adapter.ts     (modified) registerDocketTools(mcp, daemon): write_docket + hide_docket.
 ├── paths.ts       (modified) Read CLAWD_DOCKLET_HUD_MODE.
 ├── index.ts       (unchanged)
 └── protocol.ts    (unchanged)
 
 test/
 ├── docket.test.ts (new)      Unit: inject a mock glimpseui `open`; assert probe-then-open flow, setHTML on update, close on hide, cached screen dims.
-├── e2e.test.ts    (modified) Rename `docket_show` → `set_docket` assertions; add `hide_docket` coverage.
+├── e2e.test.ts    (modified) Rename `docket_show` → `write_docket` assertions; add `hide_docket` coverage.
 └── adapter-daemon.test.ts    (unchanged)
 ```
 
@@ -205,10 +205,10 @@ Internal state: optional `GlimpseWindow` handle; cached `{width, height}` from p
 
 ```ts
 export function registerDocketHandlers(daemon: Pick<Daemon, "onRequest">, docket: Docket) {
-  daemon.onRequest("show", async (params) => {
-    const p = params as Partial<ShowParams> | null;
-    if (!p || typeof p.html !== "string") throw new Error("show: 'html' must be a string");
-    if (p.title !== undefined && typeof p.title !== "string") throw new Error("show: 'title' must be a string when provided");
+  daemon.onRequest("write", async (params) => {
+    const p = params as Partial<WriteParams> | null;
+    if (!p || typeof p.html !== "string") throw new Error("write: 'html' must be a string");
+    if (p.title !== undefined && typeof p.title !== "string") throw new Error("write: 'title' must be a string when provided");
     await docket.show(p.html, p.title);
     return { ok: true };
   });
@@ -240,7 +240,7 @@ The `ping` stub handler is dropped — no longer a shell placeholder now that re
 - `always` mode: placeholder not auto-rendered by the module (that's daemon.ts's job) — but placeholder constant is exported so both the daemon and the test can share it
 - Probe timeout → `show()` rejects with actionable error
 
-**`test/e2e.test.ts` (modified)** — real subprocess + MCP SDK client. Rename `docket_show` → `set_docket`. Add a `hide_docket` test. These tests run against a daemon without a working display (CI), so the glimpseui binary will fail to open a window. **The RPC layer must still return `ok`** — glimpse failures surface as daemon-side errors logged to stderr but don't crash the daemon. To keep the e2e test deterministic, add a new env var `CLAWD_DOCKLET_DOCKET_DISABLED=1` that makes `Docket.show/hide` become no-ops (return immediately). The e2e tests set this flag.
+**`test/e2e.test.ts` (modified)** — real subprocess + MCP SDK client. Rename `docket_show` → `write_docket`. Add a `hide_docket` test. These tests run against a daemon without a working display (CI), so the glimpseui binary will fail to open a window. **The RPC layer must still return `ok`** — glimpse failures surface as daemon-side errors logged to stderr but don't crash the daemon. To keep the e2e test deterministic, add a new env var `CLAWD_DOCKLET_DOCKET_DISABLED=1` that makes `Docket.show/hide` become no-ops (return immediately). The e2e tests set this flag.
 
 Rationale: we want to verify the MCP tool surface and RPC plumbing end-to-end without depending on a GUI-capable runner. Real window rendering stays a manual smoke test during development.
 
@@ -266,7 +266,7 @@ Existing `CLAWD_DOCKLET_ROLE`, `CLAWD_DOCKLET_SOCKET`, `CLAWD_DOCKLET_PIDFILE`, 
 
 ## 15. Follow-ups
 
-- Rename "docket" once the right name surfaces (HUD? surface? canvas?). `set_docket`/`hide_docket` are temporary.
-- Consider a size parameter on `set_docket` (or a separate `resize_docket`) once there's a real use case.
+- Rename "docket" once the right name surfaces (HUD? surface? canvas?). `write_docket`/`hide_docket` are temporary.
+- Consider a size parameter on `write_docket` (or a separate `resize_docket`) once there's a real use case.
 - Revisit the placeholder design once clients start driving real content.
 - **Token-efficient iterative updates** → [`2026-04-23-docket-read-edit-tools.md`](./2026-04-23-docket-read-edit-tools.md) (docklet-494): adds `read_docket` / `edit_docket` mirroring the FS Read/Edit tool pair, with daemon-side read-before-edit gate.

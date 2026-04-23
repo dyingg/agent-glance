@@ -29,7 +29,7 @@ describe("end-to-end MCP over stdio", () => {
     cleanupEnv(env);
   });
 
-  test("initialize handshake advertises set_docket and hide_docket tools", async () => {
+  test("initialize handshake advertises write_docket and hide_docket tools", async () => {
     const transport = new StdioClientTransport({
       command: process.execPath,
       args: [ENTRY],
@@ -47,13 +47,14 @@ describe("end-to-end MCP over stdio", () => {
 
     const { tools } = await client.listTools();
     const names = tools.map((t) => t.name);
-    expect(names).toEqual(expect.arrayContaining(["set_docket", "hide_docket"]));
+    expect(names).toEqual(expect.arrayContaining(["write_docket", "hide_docket"]));
     expect(names).not.toContain("docket_show");
+    expect(names).not.toContain("set_docket");
 
     await client.close();
   });
 
-  test("calling set_docket forwards to the daemon and returns ok", async () => {
+  test("calling write_docket forwards to the daemon and returns ok", async () => {
     const transport = new StdioClientTransport({
       command: process.execPath,
       args: [ENTRY],
@@ -63,7 +64,7 @@ describe("end-to-end MCP over stdio", () => {
     await client.connect(transport);
 
     const result = await client.callTool({
-      name: "set_docket",
+      name: "write_docket",
       arguments: { html: "<h1>hello</h1>", title: "greet" },
     });
     expect(result.isError).toBeFalsy();

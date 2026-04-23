@@ -4,12 +4,12 @@
 **Status:** Draft — design agreed, implementation pending
 **Scope:** Add two MCP tools that mirror Claude Code's `Read` / `Edit` tool pair, scoped to the daemon-owned HUD HTML buffer. Purpose is token efficiency for iterative UI updates.
 **Issue:** docklet-494
-**Predecessor:** docklet-878 (docket HUD) — this spec assumes `set_docket` / `hide_docket` and the `Docket` module from [`2026-04-23-docket-hud-design.md`](./2026-04-23-docket-hud-design.md) exist and the daemon already owns the singleton HUD.
+**Predecessor:** docklet-878 (docket HUD) — this spec assumes `write_docket` / `hide_docket` and the `Docket` module from [`2026-04-23-docket-hud-design.md`](./2026-04-23-docket-hud-design.md) exist and the daemon already owns the singleton HUD.
 **Depends on:** [`2026-04-23-docket-hud-design.md`](./2026-04-23-docket-hud-design.md)
 
 ## 1. Purpose
 
-`set_docket` replaces the full HTML blob every call. For iterative UI work — flipping a status dot from green to red, bumping a progress number, appending a row — re-sending the whole document is token-wasteful and obscures intent.
+`write_docket` replaces the full HTML blob every call. For iterative UI work — flipping a status dot from green to red, bumping a progress number, appending a row — re-sending the whole document is token-wasteful and obscures intent.
 
 Claude Code agents already have a robust mental model for "read the current state, then patch a specific slice." We copy that model 1:1, scoped to the HUD:
 
@@ -30,7 +30,7 @@ client B ──stdio──▶ adapter ─┼──▶ socket ──▶ daemon
                              │                     └─ perClient: Map<cxnId, lastReadVersion>
 ```
 
-`DocketBuffer` is the new piece. It lives in the daemon process and is the authoritative source of truth for what the HUD is showing. Every mutation — whether from `set_docket`, `edit_docket`, or `hide_docket` — flows through it and bumps `version`.
+`DocketBuffer` is the new piece. It lives in the daemon process and is the authoritative source of truth for what the HUD is showing. Every mutation — whether from `write_docket`, `edit_docket`, or `hide_docket` — flows through it and bumps `version`.
 
 Per-client bookkeeping is keyed by the daemon socket connection id (each adapter → daemon `DaemonClient` gets its own id), **not** by MCP session. This matches how the FS tools scope their bookkeeping: one editor process, one registry.
 
@@ -53,7 +53,7 @@ Internally, on success the daemon sets `perClient[cxnId] = version` so the next 
 ### 3.2 `edit_docket`
 
 - **title:** "Patch the Docket HUD HTML by exact string replacement"
-- **description:** "Replace `old_string` with `new_string` in the current HUD HTML. Mirrors the semantics of the `Edit` tool on files: `old_string` must match byte-for-byte (including whitespace) and must be unique unless `replace_all` is true. Requires a prior `read_docket` in this session — the daemon rejects edits that race ahead of the reader's view. Use `set_docket` for full-document replacement."
+- **description:** "Replace `old_string` with `new_string` in the current HUD HTML. Mirrors the semantics of the `Edit` tool on files: `old_string` must match byte-for-byte (including whitespace) and must be unique unless `replace_all` is true. Requires a prior `read_docket` in this session — the daemon rejects edits that race ahead of the reader's view. Use `write_docket` for full-document replacement."
 
 Input schema (JSON Schema):
 
@@ -88,7 +88,7 @@ Version is a monotonically increasing integer (daemon-local; resets on daemon re
 
 Any of these bump `version`:
 
-- `set_docket` — replaces `html`, bumps version.
+- `write_docket` — replaces `html`, bumps version.
 - `edit_docket` — mutates `html`, bumps version.
 - `hide_docket` — sets `html = ""`, bumps version. (Rationale: subsequent reads should see `""`, not the stale pre-hide HTML.)
 - Daemon startup in `always` mode — initial placeholder counts as version 1, not 0. Clients must read before patching the placeholder.
@@ -112,7 +112,7 @@ src/
 test/
 ├── docket-buffer.test.ts (new)  Pure unit test of DocketBuffer: gate transitions, version bumps, uniqueness checks, replace_all, all error paths.
 ├── adapter-daemon.test.ts (modified) In-process read/edit integration; multi-client StaleRead scenario.
-└── e2e.test.ts       (modified) Real subprocess: set_docket → read_docket → edit_docket → read_docket round-trip over MCP.
+└── e2e.test.ts       (modified) Real subprocess: write_docket → read_docket → edit_docket → read_docket round-trip over MCP.
 ```
 
 ## 6. `src/docket-buffer.ts` public API
@@ -164,7 +164,7 @@ if (paths.hudMode === "always") await buffer.set(PLACEHOLDER_HTML);   // bumps v
 `registerDocketHandlers` expands:
 
 ```ts
-daemon.onRequest("show", async (params, meta) => {                    // set_docket
+daemon.onRequest("write", async (params, meta) => {                   // write_docket
   /* ...existing validation... */
   buffer.set(p.html);
   return { ok: true, version: buffer.getVersion() };
@@ -214,7 +214,7 @@ daemon.onConnectionClose((clientId) => buffer.forgetClient(clientId));
 
 **`test/e2e.test.ts` (modified)** — real subprocess, MCP SDK client:
 
-- `set_docket({html: "<div id=a>hi</div>"})` → `read_docket()` returns that exact string → `edit_docket({old_string: "hi", new_string: "bye"})` ok → `read_docket()` shows `<div id=a>bye</div>`.
+- `write_docket({html: "<div id=a>hi</div>"})` → `read_docket()` returns that exact string → `edit_docket({old_string: "hi", new_string: "bye"})` ok → `read_docket()` shows `<div id=a>bye</div>`.
 - `edit_docket` before any `read_docket` → MCP error with message containing `MustReadFirst`.
 - Uses the existing `CLAWD_DOCKLET_DOCKET_DISABLED=1` flag so no real window is spawned — the buffer path is exercised regardless.
 

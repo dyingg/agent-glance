@@ -65,9 +65,9 @@ describe("adapter ↔ daemon", () => {
       registerDocketHandlers(daemon, docket);
     });
 
-    describe("show", () => {
+    describe("write", () => {
       test("accepts a well-formed payload and acks", async () => {
-        const result = await client.request("show", {
+        const result = await client.request("write", {
           html: "<h1>hi</h1>",
           title: "Greetings",
         });
@@ -75,17 +75,17 @@ describe("adapter ↔ daemon", () => {
       });
 
       test("accepts html without a title", async () => {
-        const result = await client.request("show", { html: "<p>nope</p>" });
+        const result = await client.request("write", { html: "<p>nope</p>" });
         expect(result).toEqual({ ok: true });
       });
 
       test("rejects a missing html field", async () => {
-        await expect(client.request("show", {})).rejects.toThrow(/html.*must be a string/);
+        await expect(client.request("write", {})).rejects.toThrow(/html.*must be a string/);
       });
 
       test("rejects a non-string title", async () => {
         await expect(
-          client.request("show", { html: "<p>x</p>", title: 42 }),
+          client.request("write", { html: "<p>x</p>", title: 42 }),
         ).rejects.toThrow(/title.*must be a string/);
       });
     });
@@ -96,8 +96,8 @@ describe("adapter ↔ daemon", () => {
         expect(result).toEqual({ ok: true });
       });
 
-      test("acks after show", async () => {
-        await client.request("show", { html: "<p>x</p>" });
+      test("acks after write", async () => {
+        await client.request("write", { html: "<p>x</p>" });
         const result = await client.request("hide", {});
         expect(result).toEqual({ ok: true });
       });

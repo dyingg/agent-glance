@@ -94,9 +94,9 @@ export class DaemonClient {
 
 export function registerDocketTools(mcp: McpServer, daemon: Pick<DaemonClient, "request">) {
   mcp.registerTool(
-    "set_docket",
+    "write_docket",
     {
-      title: "Set HTML in Docklet HUD",
+      title: "Write HTML to the Docklet HUD",
       description:
         "Render the given HTML in the shared Docklet HUD window (top-right of the screen, frameless, transparent, clickthrough). Multiple MCP clients share a single window owned by the daemon; each call replaces the previous HTML.",
       inputSchema: {
@@ -105,7 +105,7 @@ export function registerDocketTools(mcp: McpServer, daemon: Pick<DaemonClient, "
       },
     },
     async ({ html, title }) => {
-      await daemon.request("show", { html, title });
+      await daemon.request("write", { html, title });
       return { content: [{ type: "text", text: "ok" }] };
     },
   );
@@ -115,7 +115,7 @@ export function registerDocketTools(mcp: McpServer, daemon: Pick<DaemonClient, "
     {
       title: "Hide the Docklet HUD",
       description:
-        "Close the shared Docklet HUD window. A subsequent `set_docket` will reopen it.",
+        "Close the shared Docklet HUD window. A subsequent `write_docket` will reopen it.",
       inputSchema: {},
     },
     async () => {

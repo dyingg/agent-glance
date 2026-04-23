@@ -4,7 +4,8 @@
 **Status:** Approved — shipped (docklet-2v5); subsequent work builds on this.
 **Scope:** Minimal runnable shell, installable via MCP server installer. No tools yet.
 **Follow-ups built on this shell:**
-- [`2026-04-23-docket-hud-design.md`](./2026-04-23-docket-hud-design.md) — first real tools (`set_docket`, `hide_docket`) + daemon-owned glimpseui window (docklet-878).
+- [`2026-04-23-docket-hud-design.md`](./2026-04-23-docket-hud-design.md) — first real tools (`write_docket`, `hide_docket`) + daemon-owned glimpseui window (docklet-878).
+- [`2026-04-23-docket-read-edit-tools.md`](./2026-04-23-docket-read-edit-tools.md) — `read_docket` / `edit_docket` mirroring the FS Read/Edit pair for token-efficient HUD patching (docklet-494).
 
 ## 1. Purpose
 

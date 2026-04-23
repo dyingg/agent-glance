@@ -89,7 +89,8 @@ src/paths.ts      # env-aware resolution of socket/pidfile/idle-timeout
 
 Design specs (read before touching these areas):
 - `docs/superpowers/specs/2026-04-23-clawd-docklet-shell-design.md` — adapter/daemon singleton architecture, env knobs, test layers.
-- `docs/superpowers/specs/2026-04-23-docket-hud-design.md` — the docket HUD: daemon-owned glimpseui window, `set_docket`/`hide_docket` tools, top-right positioning via screen probe, `CLAWD_DOCKLET_HUD_MODE` lifecycle.
+- `docs/superpowers/specs/2026-04-23-docket-hud-design.md` — the docket HUD: daemon-owned glimpseui window, `write_docket`/`hide_docket` tools, top-right positioning via screen probe, `CLAWD_DOCKLET_HUD_MODE` lifecycle.
+- `docs/superpowers/specs/2026-04-23-docket-read-edit-tools.md` — `read_docket`/`edit_docket`: Edit-style string-replace patching with daemon-side read-before-edit gate.
 
 ## Conventions & Patterns
 
