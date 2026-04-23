@@ -1,5 +1,7 @@
 # agent-glance
 
+![Glance HUD preview](media/preview.png)
+
 An MCP server that provides a shared HUD — the **glance** — across AI agent sessions. Multiple clients (Claude Code sessions, Codex, etc.) attach to one running server instead of spawning one per client, so every session sees and can update the same on-screen surface.
 
 ## Install

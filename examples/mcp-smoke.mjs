@@ -81,56 +81,83 @@ async function main() {
     return res;
   };
 
-  // console.log("\n── 1. write_glance(hello) ──  (blue pill, 2s)");
-  // await call("write_glance", { html: HELLO, title: "hello" });
-  // await sleep(2000);
+  console.log("\n── 1. write_glance(hello) ──  (blue pill, 2s)");
+  await call("write_glance", { html: HELLO, title: "hello" });
+  await sleep(2000);
 
-  // console.log("\n── 2. write_glance(progress @ 0%) ──  (progress card appears)");
-  // await call("write_glance", { html: PROGRESS, title: "building" });
-  // await sleep(1200);
+  console.log(
+    "\n── 2. write_glance(progress @ 0%) ──  (progress card appears)"
+  );
+  await call("write_glance", { html: PROGRESS, title: "building" });
+  await sleep(1200);
 
-  // console.log("\n── 3. read_glance ──  (arms this client for edit_glance)");
-  // const read = await call("read_glance");
-  // console.log(`   HUD is ${read.content?.[0]?.text?.length ?? 0} chars of HTML`);
+  console.log("\n── 3. read_glance ──  (arms this client for edit_glance)");
+  const read = await call("read_glance");
+  console.log(
+    `   HUD is ${read.content?.[0]?.text?.length ?? 0} chars of HTML`
+  );
 
-  // console.log("\n── 4. edit_glance: bump progress 0% → 33%, label → Building ──");
-  // await call("edit_glance", { old_string: "width:0%;", new_string: "width:33%;" });
-  // await call("edit_glance", { old_string: "0% · step 0/4", new_string: "33% · step 1/4" });
-  // await call("edit_glance", { old_string: "Starting…", new_string: "Building…" });
-  // await sleep(1000);
+  console.log(
+    "\n── 4. edit_glance: bump progress 0% → 33%, label → Building ──"
+  );
+  await call("edit_glance", {
+    old_string: "width:0%;",
+    new_string: "width:33%;",
+  });
+  await call("edit_glance", {
+    old_string: "0% · step 0/4",
+    new_string: "33% · step 1/4",
+  });
+  await call("edit_glance", {
+    old_string: "Starting…",
+    new_string: "Building…",
+  });
+  await sleep(1000);
 
-  // console.log("\n── 5. edit_glance: 33% → 66% (step 2/4) ──");
-  // await call("edit_glance", { old_string: "width:33%;", new_string: "width:66%;" });
-  // await call("edit_glance", { old_string: "33% · step 1/4", new_string: "66% · step 2/4" });
-  // await sleep(1000);
+  console.log("\n── 5. edit_glance: 33% → 66% (step 2/4) ──");
+  await call("edit_glance", {
+    old_string: "width:33%;",
+    new_string: "width:66%;",
+  });
+  await call("edit_glance", {
+    old_string: "33% · step 1/4",
+    new_string: "66% · step 2/4",
+  });
+  await sleep(1000);
 
-  // console.log("\n── 6. edit_glance: 66% → 100%, label → Done ──");
-  // await call("edit_glance", { old_string: "width:66%;", new_string: "width:100%;" });
-  // await call("edit_glance", { old_string: "66% · step 2/4", new_string: "100% · step 4/4" });
-  // await call("edit_glance", { old_string: "Building…", new_string: "✅ Done" });
-  // await call("edit_glance", { old_string: "#fbbf24", new_string: "#34c759" }); // dot: amber → green
-  // await sleep(2000);
+  console.log("\n── 6. edit_glance: 66% → 100%, label → Done ──");
+  await call("edit_glance", {
+    old_string: "width:66%;",
+    new_string: "width:100%;",
+  });
+  await call("edit_glance", {
+    old_string: "66% · step 2/4",
+    new_string: "100% · step 4/4",
+  });
+  await call("edit_glance", { old_string: "Building…", new_string: "✅ Done" });
+  await call("edit_glance", { old_string: "#fbbf24", new_string: "#34c759" }); // dot: amber → green
+  await sleep(2000);
 
-  // console.log("\n── 7. edit_glance WITHOUT prior read fails ──");
-  // //  Demonstrate the read-before-edit gate. write_glance invalidates the
-  // //  previous lastRead version; we skip read_glance on purpose here.
-  // await call("write_glance", { html: PROGRESS, title: "reset" });
-  // const staleRes = await call("edit_glance", {
-  //   old_string: "width:0%;",
-  //   new_string: "width:50%;",
-  // });
-  // if (!staleRes.isError) {
-  //   console.error("!! expected isError=true from edit without prior read");
-  //   process.exitCode = 1;
-  // }
+  console.log("\n── 7. edit_glance WITHOUT prior read fails ──");
+  //  Demonstrate the read-before-edit gate. write_glance invalidates the
+  //  previous lastRead version; we skip read_glance on purpose here.
+  await call("write_glance", { html: PROGRESS, title: "reset" });
+  const staleRes = await call("edit_glance", {
+    old_string: "width:0%;",
+    new_string: "width:50%;",
+  });
+  if (!staleRes.isError) {
+    console.error("!! expected isError=true from edit without prior read");
+    process.exitCode = 1;
+  }
 
-  // console.log("\n── 8. hide_glance ──  (window closes, 1s)");
-  // await call("hide_glance");
-  // await sleep(1000);
+  console.log("\n── 8. hide_glance ──  (window closes, 1s)");
+  await call("hide_glance");
+  await sleep(1000);
 
-  // console.log("\n── 9. write_glance(hello) ──  (reopens fast, cached probe)");
-  // await call("write_glance", { html: HELLO, title: "back" });
-  // await sleep(2000);
+  console.log("\n── 9. write_glance(hello) ──  (reopens fast, cached probe)");
+  await call("write_glance", { html: HELLO, title: "back" });
+  await sleep(2000);
 
   console.log(
     "\n── 10. write_glance(boundary fill) ──  (solid colour fills the full glance box)"
