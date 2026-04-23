@@ -1,11 +1,11 @@
 {
-  "name": "clawd-docklet",
-  "version": "0.0.1",
-  "description": "MCP server shell with singleton daemon architecture for shared glimpseui UI across multiple agent sessions.",
+  "name": "agent-glance",
+  "version": "0.1.0",
+  "description": "MCP server providing a shared HUD ('glance') for AI agents — singleton daemon, stdio adapter, multi-client.",
   "license": "MIT",
   "type": "module",
   "bin": {
-    "clawd-docklet": "dist/index.js"
+    "agent-glance": "dist/index.js"
   },
   "files": [
     "dist"
@@ -20,8 +20,26 @@
     "prepare": "npm run build",
     "postinstall": "patch-package",
     "prepublishOnly": "npm run build && npm test",
-    "daemon": "npm run build && CLAWD_DOCKLET_ROLE=daemon CLAWD_DOCKLET_IDLE_MS=0 node ./dist/index.js",
+    "daemon": "npm run build && AGENT_GLANCE_ROLE=daemon AGENT_GLANCE_IDLE_MS=0 node ./dist/index.js",
     "smoke": "npm run build && node ./examples/mcp-smoke.mjs"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "claude",
+    "agent",
+    "hud",
+    "glance",
+    "glimpseui"
+  ],
+  "author": "Dying",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/<owner>/agent-glance.git"
+  },
+  "homepage": "https://github.com/<owner>/agent-glance#readme",
+  "bugs": {
+    "url": "https://github.com/<owner>/agent-glance/issues"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
