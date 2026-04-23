@@ -64,7 +64,7 @@ npx tsc -p tsconfig.test.json        # typecheck tests without emitting
 
 ## Architecture Overview
 
-`clawd-docklet` is a TypeScript MCP server published to npm. It uses a **singleton daemon + stdio adapter** pattern so multiple MCP clients (Claude Code sessions, Codex) share one server process instead of spawning one per client.
+`agent-glance` is a TypeScript MCP server published to npm. It uses a **singleton daemon + stdio adapter** pattern so multiple MCP clients (Claude Code sessions, Codex) share one server process instead of spawning one per client.
 
 ```
 Client #1 ──stdio──▶ adapter ─┐
@@ -72,8 +72,8 @@ Client #2 ──stdio──▶ adapter ─┼──▶ Unix socket ──▶ dae
 Codex     ──stdio──▶ adapter ─┘
 ```
 
-- **One binary, two roles.** `dist/index.js` dispatches by `CLAWD_DOCKLET_ROLE`: unset → adapter (default), `daemon` → long-running server the adapter spawns on first use via `spawn(..., { detached: true, stdio: "ignore" }).unref()`.
-- **Race-free startup.** The daemon `bind()`s on a Unix socket (`~/Library/Application Support/clawd-docklet/daemon.sock` on macOS). If two adapters try to spawn a daemon simultaneously, only one wins the bind; the other gets `EADDRINUSE` and exits cleanly.
+- **One binary, two roles.** `dist/index.js` dispatches by `AGENT_GLANCE_ROLE`: unset → adapter (default), `daemon` → long-running server the adapter spawns on first use via `spawn(..., { detached: true, stdio: "ignore" }).unref()`.
+- **Race-free startup.** The daemon `bind()`s on a Unix socket (`~/Library/Application Support/agent-glance/daemon.sock` on macOS). If two adapters try to spawn a daemon simultaneously, only one wins the bind; the other gets `EADDRINUSE` and exits cleanly.
 - **Shell stage.** No MCP tools registered yet — the server handshakes, reports `tools/list` as empty, and maintains the adapter↔daemon wiring so the next change is "add a tool" rather than a refactor.
 - **Shared state lives in the daemon.** `glimpseui` window management (forthcoming) will live daemon-side so all clients see the same UI state.
 
@@ -88,14 +88,14 @@ src/paths.ts      # env-aware resolution of socket/pidfile/idle-timeout
 ```
 
 Design specs (read before touching these areas):
-- `docs/superpowers/specs/2026-04-23-clawd-docklet-shell-design.md` — adapter/daemon singleton architecture, env knobs, test layers.
-- `docs/superpowers/specs/2026-04-23-docket-hud-design.md` — the docket HUD: daemon-owned glimpseui window, `write_docket`/`hide_docket` tools, top-right positioning via screen probe, `CLAWD_DOCKLET_HUD_MODE` lifecycle.
-- `docs/superpowers/specs/2026-04-23-docket-read-edit-tools.md` — `read_docket`/`edit_docket`: Edit-style string-replace patching with daemon-side read-before-edit gate.
+- `docs/superpowers/specs/2026-04-23-agent-glance-shell-design.md` — adapter/daemon singleton architecture, env knobs, test layers.
+- `docs/superpowers/specs/2026-04-23-glance-hud-design.md` — the glance HUD: daemon-owned glimpseui window, `write_glance`/`hide_glance` tools, top-right positioning via screen probe, `AGENT_GLANCE_HUD_MODE` lifecycle.
+- `docs/superpowers/specs/2026-04-23-glance-read-edit-tools.md` — `read_glance`/`edit_glance`: Edit-style string-replace patching with daemon-side read-before-edit gate.
 
 ## Conventions & Patterns
 
 - **ESM everywhere.** `"type": "module"` in `package.json`; imports use explicit `.js` extensions (TypeScript NodeNext resolution).
-- **Env-var knobs for testability.** All paths and timeouts (`CLAWD_DOCKLET_SOCKET`, `CLAWD_DOCKLET_PIDFILE`, `CLAWD_DOCKLET_IDLE_MS`) override defaults so tests get isolated sockets in `mkdtempSync` dirs.
+- **Env-var knobs for testability.** All paths and timeouts (`AGENT_GLANCE_SOCKET`, `AGENT_GLANCE_PIDFILE`, `AGENT_GLANCE_IDLE_MS`) override defaults so tests get isolated sockets in `mkdtempSync` dirs.
 - **Test helpers live in `test/helpers/`.** `freshEnv()` builds an isolated env; `readDaemonPid()` + `waitForProcessExit()` for process-level assertions.
 - **Four test layers.** Layer 1 (protocol unit), Layer 2 (in-process adapter↔daemon), Layer 4 (real-subprocess MCP handshake). Layer 3 hardening tests (race, stale socket, idle shutdown) are deferred to the first-tool milestone.
 

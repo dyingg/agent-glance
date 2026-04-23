@@ -1,27 +1,29 @@
-# clawd-docklet
+# agent-glance
 
-An MCP server shell with a singleton-daemon architecture. Designed so multiple agent sessions (Claude Code, Codex, etc.) share a single running server instead of spawning one per client.
-
-**Status:** Shell only — no tools registered yet. Installs, handshakes, lists zero tools.
+An MCP server that provides a shared HUD — the **glance** — across AI agent sessions. Multiple clients (Claude Code sessions, Codex, etc.) attach to one running server instead of spawning one per client, so every session sees and can update the same on-screen surface.
 
 ## Install
 
 ```bash
-claude mcp add clawd-docklet -- npx -y clawd-docklet
+# Claude Code
+claude mcp add agent-glance -- npx -y agent-glance
+
+# Codex
+codex mcp add agent-glance -- npx -y agent-glance
 ```
 
 For local development:
 
 ```bash
 git clone <this repo>
-cd docklet
+cd agent-glance
 npm install
 npm run build
 npm link
-claude mcp add clawd-docklet -- clawd-docklet
+claude mcp add agent-glance -- agent-glance
 ```
 
-## Architecture
+## How it works
 
 ```
 Client #1 ──stdio──▶ adapter ─┐
@@ -29,12 +31,16 @@ Client #2 ──stdio──▶ adapter ─┼──▶ Unix socket ──▶ dae
 Codex     ──stdio──▶ adapter ─┘
 ```
 
-One compiled binary, two roles. Dispatched by the `CLAWD_DOCKLET_ROLE` env var:
+`agent-glance` uses a **singleton daemon + stdio adapter** pattern. One compiled binary plays two roles, dispatched by the `AGENT_GLANCE_ROLE` env var: unset → adapter (what the MCP client launches), `daemon` → the long-running server the adapter spawns on first use. The daemon owns the glance window state and uses `bind()` on its socket path as its lock, so simultaneous adapter launches cannot produce two daemons.
 
-- unset → adapter (what the MCP client launches)
-- `daemon` → long-running server the adapter spawns on first use
+## Tools
 
-The daemon uses `bind()` on its socket path as its lock — simultaneous adapter launches cannot produce two daemons.
+| Tool | Description |
+|---|---|
+| `write_glance` | Replace the glance HUD contents with a new body (markdown/text). |
+| `hide_glance` | Hide the glance window without clearing its buffer. |
+| `read_glance` | Read back the current glance buffer (used as a gate before editing). |
+| `edit_glance` | Apply an Edit-style string-replace patch to the glance buffer (read-before-edit enforced). |
 
 ## Development
 
@@ -48,10 +54,14 @@ npm run test:watch
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `CLAWD_DOCKLET_SOCKET` | platform-specific | Socket/pipe path |
-| `CLAWD_DOCKLET_PIDFILE` | next to socket | Pidfile written on daemon bind |
-| `CLAWD_DOCKLET_IDLE_MS` | `30000` | Ms after last client disconnect before daemon exits |
-| `CLAWD_DOCKLET_ROLE` | unset | Set to `daemon` to run as daemon (internal) |
+| `AGENT_GLANCE_SOCKET` | platform-specific | Socket/pipe path |
+| `AGENT_GLANCE_PIDFILE` | next to socket | Pidfile written on daemon bind |
+| `AGENT_GLANCE_IDLE_MS` | `30000` | Ms after last client disconnect before daemon exits |
+| `AGENT_GLANCE_ROLE` | unset | Set to `daemon` to run as daemon (internal) |
+| `AGENT_GLANCE_HUD_MODE` | unset | Glance HUD lifecycle mode |
+| `AGENT_GLANCE_HUD_DISABLED` | unset | Disable the glance HUD entirely |
+| `AGENT_GLANCE_STATUS_DISABLED` | unset | Disable the menu-bar status item |
+| `AGENT_GLANCE_CONFIG` | platform-specific | Config file path |
 
 ## License
 
