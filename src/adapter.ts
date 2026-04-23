@@ -1,9 +1,8 @@
 import { connect, type Socket } from "node:net";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import { encode, LineDecoder, type Frame } from "./protocol.js";
 import { resolvePaths, type Paths } from "./paths.js";
 
@@ -97,12 +96,10 @@ export async function runAdapterMain() {
   const daemonSock = await getOrSpawnDaemon(paths);
   const daemon = new DaemonClient(daemonSock);
 
-  const mcp = new Server(
-    { name: "clawd-docklet", version: "0.0.1" },
-    { capabilities: { tools: {} } },
-  );
-
-  mcp.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: [] }));
+  // McpServer auto-registers tools/list and the `tools` capability the first
+  // time registerTool() is called. With no tools registered, the server
+  // advertises no capabilities — which is correct for the shell stage.
+  const mcp = new McpServer({ name: "clawd-docklet", version: "0.0.1" });
 
   // Keep the daemon warm while this adapter is connected.
   // Future: route tools/call here through daemon.request(...).

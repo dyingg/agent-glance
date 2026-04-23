@@ -96,6 +96,29 @@ Design spec: `docs/superpowers/specs/2026-04-23-clawd-docklet-shell-design.md`.
 - **Test helpers live in `test/helpers/`.** `freshEnv()` builds an isolated env; `readDaemonPid()` + `waitForProcessExit()` for process-level assertions.
 - **Four test layers.** Layer 1 (protocol unit), Layer 2 (in-process adapter↔daemon), Layer 4 (real-subprocess MCP handshake). Layer 3 hardening tests (race, stale socket, idle shutdown) are deferred to the first-tool milestone.
 
+## Verify Library APIs Before Using Them
+
+> ⚠️ **Agent note:** your training data may predate the latest release of any dependency. Before writing or reviewing code that imports from a third-party library — especially one that evolves fast — **verify the current API first**. Do not assume the class/function/signature you remember is still the recommended one; it may be `@deprecated` in the installed version.
+
+### How to verify
+
+1. **Check the installed version** — `npm view <pkg> version` and `cat node_modules/<pkg>/package.json` (look at `"version"`).
+2. **Read the installed `.d.ts` files** — `grep -rn "@deprecated\|export declare" node_modules/<pkg>/dist/**/*.d.ts`. The TypeScript declarations in your own `node_modules` are the source of truth for what's currently shipped.
+3. **Pull current docs via context7** — `mcp__plugin_context7_context7__resolve-library-id` then `query-docs` for the specific API you need.
+4. **Cross-reference the upstream repo** when context7 is ambiguous.
+
+### `@modelcontextprotocol/sdk` — current (as of 2026-04-23)
+
+- **Installed version:** `1.29.0`
+- **Server construction:** use `McpServer` from `@modelcontextprotocol/sdk/server/mcp.js`.
+  - The low-level `Server` class at `@modelcontextprotocol/sdk/server/index.js` is **`@deprecated`** — only for advanced use cases.
+- **Tool registration:** use `server.registerTool(name, config, handler)`.
+  - All `server.tool(...)` overloads are **`@deprecated`** in favor of `registerTool`.
+- **Capability wiring is implicit.** `McpServer` only advertises the `tools` capability and wires the `tools/list` + `tools/call` handlers after the first `registerTool()` call. A zero-tools shell therefore advertises no tools capability — which is correct and expected.
+- **Transport:** `StdioServerTransport` from `@modelcontextprotocol/sdk/server/stdio.js` is still current. `StdioClientTransport` is still current on the client side.
+
+If you are about to write `new Server(...)`, `mcp.setRequestHandler(ListToolsRequestSchema, ...)`, or `server.tool(...)` — stop and re-verify. That's the shape of the *old* API. The current shape is `new McpServer(...)` + `registerTool(...)`.
+
 ## Git Commits
 
 Keep commits atomic: commit only the files you touched and list each path explicitly.

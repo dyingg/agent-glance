@@ -26,7 +26,7 @@ describe("end-to-end MCP over stdio", () => {
     cleanupEnv(env);
   });
 
-  test("initialize handshake succeeds and tools list is empty", async () => {
+  test("initialize handshake succeeds and no tool capability is advertised", async () => {
     const transport = new StdioClientTransport({
       command: process.execPath,
       args: [ENTRY],
@@ -37,9 +37,12 @@ describe("end-to-end MCP over stdio", () => {
     await client.connect(transport);
     const info = client.getServerVersion();
     expect(info?.name).toBe("clawd-docklet");
+    expect(info?.version).toBe("0.0.1");
 
-    const tools = await client.listTools();
-    expect(tools.tools).toEqual([]);
+    // No tools are registered yet, so the server shouldn't advertise the
+    // tools capability. Once registerTool() is called, McpServer wires it up.
+    const caps = client.getServerCapabilities();
+    expect(caps?.tools).toBeUndefined();
 
     await client.close();
   });
