@@ -1,12 +1,12 @@
 import { EventEmitter } from "node:events";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import {
-  createDocket,
+  createGlance,
   renderPlaceholderHtml,
-  type DocketOptions,
-} from "../src/docket.js";
+  type GlanceOptions,
+} from "../src/glance.js";
 
-/** Minimal fake that mirrors the subset of GlimpseWindow the Docket uses. */
+/** Minimal fake that mirrors the subset of GlimpseWindow the Glance uses. */
 class FakeWindow extends EventEmitter {
   setHTML = vi.fn<(html: string) => void>();
   close = vi.fn<() => void>();
@@ -16,7 +16,7 @@ class FakeWindow extends EventEmitter {
   }
 }
 
-type OpenFn = NonNullable<DocketOptions["open"]>;
+type OpenFn = NonNullable<GlanceOptions["open"]>;
 
 function makeOpen(onOpen?: (w: FakeWindow) => void) {
   const windows: FakeWindow[] = [];
@@ -39,16 +39,16 @@ function fireReady(w: FakeWindow, width = 1440, height = 900) {
   });
 }
 
-describe("Docket", () => {
+describe("Glance", () => {
   afterEach(() => vi.restoreAllMocks());
 
   test("first show: probe → close probe → open real HUD at top-right", async () => {
     const { open, windows } = makeOpen((w) => {
       if (windows.length === 1) fireReady(w, 1440, 900);
     });
-    const docket = createDocket({ open });
+    const glance = createGlance({ open });
 
-    await docket.show("<h1>hi</h1>");
+    await glance.show("<h1>hi</h1>");
 
     expect(windows).toHaveLength(2);
 
@@ -83,9 +83,9 @@ describe("Docket", () => {
     const { open, windows } = makeOpen((w) => {
       if (windows.length === 1) fireReady(w, 1440, 900);
     });
-    const docket = createDocket({ open });
+    const glance = createGlance({ open });
 
-    await docket.show("<h1>hi</h1>", "My HUD");
+    await glance.show("<h1>hi</h1>", "My HUD");
 
     expect(windows).toHaveLength(2);
     expect(windows[1].openArgs.options.title).toBe("My HUD");
@@ -95,9 +95,9 @@ describe("Docket", () => {
     const { open, windows } = makeOpen((w) => {
       if (windows.length === 1) fireReady(w);
     });
-    const docket = createDocket({ open });
+    const glance = createGlance({ open });
 
-    await docket.show("<h1>hi</h1>");
+    await glance.show("<h1>hi</h1>");
 
     expect(windows).toHaveLength(2);
     expect(windows[1].openArgs.options).not.toHaveProperty("title");
@@ -107,10 +107,10 @@ describe("Docket", () => {
     const { open, windows } = makeOpen((w) => {
       if (windows.length === 1) fireReady(w);
     });
-    const docket = createDocket({ open });
+    const glance = createGlance({ open });
 
-    await docket.show("<p>one</p>");
-    await docket.show("<p>two</p>");
+    await glance.show("<p>one</p>");
+    await glance.show("<p>two</p>");
 
     expect(windows).toHaveLength(2); // probe + real, no third
     expect(windows[1].setHTML).toHaveBeenCalledWith("<p>two</p>");
@@ -120,13 +120,13 @@ describe("Docket", () => {
     const { open, windows } = makeOpen((w) => {
       if (windows.length === 1) fireReady(w, 2000, 1200);
     });
-    const docket = createDocket({ open });
+    const glance = createGlance({ open });
 
-    await docket.show("<p>first</p>");
-    await docket.hide();
+    await glance.show("<p>first</p>");
+    await glance.hide();
     expect(windows[1].close).toHaveBeenCalledTimes(1);
 
-    await docket.show("<p>second</p>");
+    await glance.show("<p>second</p>");
 
     // windows[0] = probe, windows[1] = first real HUD (now closed),
     // windows[2] = reopened HUD — no second probe.
@@ -143,9 +143,9 @@ describe("Docket", () => {
     const { open, windows } = makeOpen((w) => {
       if (windows.length === 1) setTimeout(() => fireReady(w), 5);
     });
-    const docket = createDocket({ open });
+    const glance = createGlance({ open });
 
-    await Promise.all([docket.show("<p>a</p>"), docket.show("<p>b</p>")]);
+    await Promise.all([glance.show("<p>a</p>"), glance.show("<p>b</p>")]);
 
     // One probe + one real HUD.
     expect(windows).toHaveLength(2);
@@ -163,9 +163,9 @@ describe("Docket", () => {
   test("probe timeout rejects show and closes the probe window", async () => {
     vi.useFakeTimers();
     const { open, windows } = makeOpen(); // never fires ready
-    const docket = createDocket({ open, probeTimeoutMs: 500 });
+    const glance = createGlance({ open, probeTimeoutMs: 500 });
 
-    const p = docket.show("<p>x</p>");
+    const p = glance.show("<p>x</p>");
     vi.advanceTimersByTime(600);
     await expect(p).rejects.toThrow(/probe.*timed out/i);
     // Leaking the probe window = leaking a native glimpse process in prod.
@@ -175,11 +175,11 @@ describe("Docket", () => {
 
   test("disabled: show/hide/close are no-ops and never call open()", async () => {
     const { open, windows } = makeOpen();
-    const docket = createDocket({ open, disabled: true });
+    const glance = createGlance({ open, disabled: true });
 
-    await docket.show("<p>x</p>");
-    await docket.hide();
-    await docket.close();
+    await glance.show("<p>x</p>");
+    await glance.hide();
+    await glance.close();
 
     expect(windows).toHaveLength(0);
   });
@@ -207,15 +207,15 @@ describe("Docket", () => {
     const { open, windows } = makeOpen((w) => {
       if (windows.length === 1) fireReady(w, 1440, 900);
     });
-    const docket = createDocket({ open, anchor: "top-right" });
+    const glance = createGlance({ open, anchor: "top-right" });
 
-    await docket.showPlaceholder();
+    await glance.showPlaceholder();
     expect(windows).toHaveLength(2);
     expect(windows[1].openArgs.html).toMatch(
       /position:fixed;top:20px;right:20px/
     );
 
-    await docket.setAnchor("top-left");
+    await glance.setAnchor("top-left");
     // setAnchor closes the window and reopens at the new corner — new window
     // is windows[2]; its HTML is the re-rendered placeholder, not the stale
     // top-right one.
@@ -229,9 +229,9 @@ describe("Docket", () => {
     const { open, windows } = makeOpen((w) => {
       if (windows.length === 1) fireReady(w, 1440, 900);
     });
-    const docket = createDocket({ open, anchor: "top-left" });
+    const glance = createGlance({ open, anchor: "top-left" });
 
-    await docket.show("<h1>hi</h1>");
+    await glance.show("<h1>hi</h1>");
 
     expect(windows).toHaveLength(2);
     expect(windows[1].openArgs.options).toMatchObject({
@@ -246,9 +246,9 @@ describe("Docket", () => {
     const { open, windows } = makeOpen((w) => {
       if (windows.length === 1) fireReady(w, 1440, 900);
     });
-    const docket = createDocket({ open, anchor: "bottom-right" });
+    const glance = createGlance({ open, anchor: "bottom-right" });
 
-    await docket.show("<h1>hi</h1>");
+    await glance.show("<h1>hi</h1>");
 
     expect(windows[1].openArgs.options).toMatchObject({
       x: 1440 - 480 - 20,
@@ -260,9 +260,9 @@ describe("Docket", () => {
     const { open, windows } = makeOpen((w) => {
       if (windows.length === 1) fireReady(w, 1440, 900);
     });
-    const docket = createDocket({ open, anchor: "bottom-left" });
+    const glance = createGlance({ open, anchor: "bottom-left" });
 
-    await docket.show("<h1>hi</h1>");
+    await glance.show("<h1>hi</h1>");
 
     expect(windows[1].openArgs.options).toMatchObject({ x: 20, y: 20 });
   });
@@ -282,8 +282,8 @@ describe("Docket", () => {
         });
       }
     });
-    const docket = createDocket({ open, anchor: "top-right" });
-    await docket.show("<h1>hi</h1>");
+    const glance = createGlance({ open, anchor: "top-right" });
+    await glance.show("<h1>hi</h1>");
     expect(windows[1].openArgs.options).toMatchObject({
       x: 0 + 1440 - 480 - 20,
       y: 90 + 900 - 400 - 20,
@@ -294,9 +294,9 @@ describe("Docket", () => {
     const { open, windows } = makeOpen((w) => {
       if (windows.length === 1) fireReady(w, 1440, 900);
     });
-    const docket = createDocket({ open, anchor: "follow-cursor" });
+    const glance = createGlance({ open, anchor: "follow-cursor" });
 
-    await docket.show("<h1>hi</h1>");
+    await glance.show("<h1>hi</h1>");
 
     const opts = windows[1].openArgs.options;
     expect(opts).toMatchObject({ followCursor: true, width: 480, height: 400 });
@@ -308,10 +308,10 @@ describe("Docket", () => {
     const { open, windows } = makeOpen((w) => {
       if (windows.length === 1) fireReady(w, 1440, 900);
     });
-    const docket = createDocket({ open });
+    const glance = createGlance({ open });
 
-    await docket.show("<p>kept</p>", "My HUD");
-    await docket.setAnchor("bottom-left");
+    await glance.show("<p>kept</p>", "My HUD");
+    await glance.setAnchor("bottom-left");
 
     // windows[0] probe, windows[1] first HUD (closed), windows[2] reopened HUD.
     expect(windows).toHaveLength(3);
@@ -328,10 +328,10 @@ describe("Docket", () => {
     const { open, windows } = makeOpen((w) => {
       if (windows.length === 1) fireReady(w);
     });
-    const docket = createDocket({ open });
+    const glance = createGlance({ open });
 
-    await docket.show("<p>x</p>");
-    await docket.setAnchor("top-right");
+    await glance.show("<p>x</p>");
+    await glance.setAnchor("top-right");
 
     expect(windows).toHaveLength(2);
     expect(windows[1].close).not.toHaveBeenCalled();
@@ -341,10 +341,10 @@ describe("Docket", () => {
     const { open, windows } = makeOpen((w) => {
       if (windows.length === 1) fireReady(w, 1440, 900);
     });
-    const docket = createDocket({ open });
+    const glance = createGlance({ open });
 
-    await docket.setAnchor("bottom-right");
-    await docket.show("<p>first</p>");
+    await glance.setAnchor("bottom-right");
+    await glance.show("<p>first</p>");
 
     expect(windows).toHaveLength(2);
     expect(windows[1].openArgs.options).toMatchObject({
@@ -357,10 +357,10 @@ describe("Docket", () => {
     const { open, windows } = makeOpen((w) => {
       if (windows.length === 1) fireReady(w);
     });
-    const docket = createDocket({ open });
+    const glance = createGlance({ open });
 
-    await docket.show("<p>x</p>");
-    await docket.setAnchor("follow-cursor");
+    await glance.show("<p>x</p>");
+    await glance.setAnchor("follow-cursor");
 
     expect(windows).toHaveLength(3);
     const opts = windows[2].openArgs.options;
@@ -370,8 +370,8 @@ describe("Docket", () => {
 
   test("setAnchor is a no-op when disabled", async () => {
     const { open, windows } = makeOpen();
-    const docket = createDocket({ open, disabled: true });
-    await docket.setAnchor("bottom-left");
+    const glance = createGlance({ open, disabled: true });
+    await glance.setAnchor("bottom-left");
     expect(windows).toHaveLength(0);
   });
 });

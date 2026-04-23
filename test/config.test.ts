@@ -15,7 +15,7 @@ describe("config", () => {
   let path: string;
 
   beforeEach(() => {
-    dir = mkdtempSync(join(tmpdir(), "docklet-config-"));
+    dir = mkdtempSync(join(tmpdir(), "glance-config-"));
     path = join(dir, "config.json");
   });
 

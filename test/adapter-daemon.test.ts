@@ -1,7 +1,21 @@
+import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { startDaemon, type Daemon } from "../src/daemon.js";
 import { DaemonClient, connectDaemon } from "../src/adapter.js";
+import { type Paths } from "../src/paths.js";
 import { cleanupEnv, freshEnv, type FreshEnv } from "./helpers/env.js";
+
+function pathsFor(env: FreshEnv): Paths {
+  return {
+    socketPath: env.AGENT_GLANCE_SOCKET,
+    pidfilePath: env.AGENT_GLANCE_PIDFILE,
+    idleMs: 60000,
+    hudMode: "always",
+    hudDisabled: true,
+    configPath: join(env.__tmpDir, "config.json"),
+    statusDisabled: true,
+  };
+}
 
 describe("adapter ↔ daemon", () => {
   let env: FreshEnv;
@@ -10,20 +24,8 @@ describe("adapter ↔ daemon", () => {
 
   beforeEach(async () => {
     env = freshEnv();
-    daemon = await startDaemon({
-      socketPath: env.CLAWD_DOCKLET_SOCKET,
-      pidfilePath: env.CLAWD_DOCKLET_PIDFILE,
-      idleMs: 60000,
-      hudMode: "always",
-      docketDisabled: true,
-    });
-    const sock = await connectDaemon({
-      socketPath: env.CLAWD_DOCKLET_SOCKET,
-      pidfilePath: env.CLAWD_DOCKLET_PIDFILE,
-      idleMs: 60000,
-      hudMode: "always",
-      docketDisabled: true,
-    });
+    daemon = await startDaemon(pathsFor(env));
+    const sock = await connectDaemon(pathsFor(env));
     client = new DaemonClient(sock);
   });
 
@@ -55,14 +57,14 @@ describe("adapter ↔ daemon", () => {
     expect(seen).toHaveLength(2);
   });
 
-  describe("docket handlers", () => {
-    let buffer: ReturnType<typeof import("../src/docket-buffer.js")["createDocketBuffer"]>;
+  describe("glance handlers", () => {
+    let buffer: ReturnType<typeof import("../src/glance-buffer.js")["createGlanceBuffer"]>;
 
     beforeEach(async () => {
-      const { createDocketBuffer } = await import("../src/docket-buffer.js");
-      buffer = createDocketBuffer();
-      const { registerDocketHandlers } = await import("../src/daemon.js");
-      registerDocketHandlers(daemon, buffer);
+      const { createGlanceBuffer } = await import("../src/glance-buffer.js");
+      buffer = createGlanceBuffer();
+      const { registerGlanceHandlers } = await import("../src/daemon.js");
+      registerGlanceHandlers(daemon, buffer);
     });
 
     describe("write", () => {
@@ -128,13 +130,7 @@ describe("adapter ↔ daemon", () => {
         await client.request("write", { html: "<p>v1</p>" });
         await client.request("read", {});                       // clientA armed at v1
 
-        const secondSock = await connectDaemon({
-          socketPath: env.CLAWD_DOCKLET_SOCKET,
-          pidfilePath: env.CLAWD_DOCKLET_PIDFILE,
-          idleMs: 60000,
-          hudMode: "always",
-          docketDisabled: true,
-        });
+        const secondSock = await connectDaemon(pathsFor(env));
         const clientB = new DaemonClient(secondSock);
         try {
           await clientB.request("write", { html: "<p>v2</p>" });  // bumps version behind A's back
@@ -149,13 +145,7 @@ describe("adapter ↔ daemon", () => {
 
       test("connection close forgets the client's read state", async () => {
         // Fresh connection, read, close, reconnect → must read again.
-        const sock2 = await connectDaemon({
-          socketPath: env.CLAWD_DOCKLET_SOCKET,
-          pidfilePath: env.CLAWD_DOCKLET_PIDFILE,
-          idleMs: 60000,
-          hudMode: "always",
-          docketDisabled: true,
-        });
+        const sock2 = await connectDaemon(pathsFor(env));
         const c2 = new DaemonClient(sock2);
         await c2.request("write", { html: "<p>hi</p>" });
         await c2.request("read", {});
@@ -163,13 +153,7 @@ describe("adapter ↔ daemon", () => {
         // Wait for the daemon to observe the close and clear state.
         await new Promise((r) => setTimeout(r, 50));
 
-        const sock3 = await connectDaemon({
-          socketPath: env.CLAWD_DOCKLET_SOCKET,
-          pidfilePath: env.CLAWD_DOCKLET_PIDFILE,
-          idleMs: 60000,
-          hudMode: "always",
-          docketDisabled: true,
-        });
+        const sock3 = await connectDaemon(pathsFor(env));
         const c3 = new DaemonClient(sock3);
         try {
           // c3 is a fresh connId → has not read yet.

@@ -3,21 +3,21 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 export type FreshEnv = NodeJS.ProcessEnv & {
-  CLAWD_DOCKLET_SOCKET: string;
-  CLAWD_DOCKLET_PIDFILE: string;
-  CLAWD_DOCKLET_IDLE_MS: string;
+  AGENT_GLANCE_SOCKET: string;
+  AGENT_GLANCE_PIDFILE: string;
+  AGENT_GLANCE_IDLE_MS: string;
   __tmpDir: string;
 };
 
 export function freshEnv(overrides: Partial<FreshEnv> = {}): FreshEnv {
-  const dir = mkdtempSync(join(tmpdir(), "clawd-docklet-"));
+  const dir = mkdtempSync(join(tmpdir(), "agent-glance-"));
   return {
     ...process.env,
-    CLAWD_DOCKLET_SOCKET: join(dir, "daemon.sock"),
-    CLAWD_DOCKLET_PIDFILE: join(dir, "daemon.pid"),
-    CLAWD_DOCKLET_IDLE_MS: "60000",
+    AGENT_GLANCE_SOCKET: join(dir, "daemon.sock"),
+    AGENT_GLANCE_PIDFILE: join(dir, "daemon.pid"),
+    AGENT_GLANCE_IDLE_MS: "60000",
     // Safety rail: tests never touch the user's menu bar.
-    CLAWD_DOCKLET_STATUS_DISABLED: "1",
+    AGENT_GLANCE_STATUS_DISABLED: "1",
     __tmpDir: dir,
     ...overrides,
   } as FreshEnv;

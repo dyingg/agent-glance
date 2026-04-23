@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { type FreshEnv } from "./env.js";
 
 export function readDaemonPid(env: FreshEnv): number {
-  return Number.parseInt(readFileSync(env.CLAWD_DOCKLET_PIDFILE, "utf8"), 10);
+  return Number.parseInt(readFileSync(env.AGENT_GLANCE_PIDFILE, "utf8"), 10);
 }
 
 export async function waitForProcessExit(pid: number, timeoutMs = 3000): Promise<void> {
