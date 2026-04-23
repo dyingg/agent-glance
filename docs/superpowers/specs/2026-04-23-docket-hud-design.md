@@ -269,3 +269,4 @@ Existing `CLAWD_DOCKLET_ROLE`, `CLAWD_DOCKLET_SOCKET`, `CLAWD_DOCKLET_PIDFILE`, 
 - Rename "docket" once the right name surfaces (HUD? surface? canvas?). `set_docket`/`hide_docket` are temporary.
 - Consider a size parameter on `set_docket` (or a separate `resize_docket`) once there's a real use case.
 - Revisit the placeholder design once clients start driving real content.
+- **Token-efficient iterative updates** → [`2026-04-23-docket-read-edit-tools.md`](./2026-04-23-docket-read-edit-tools.md) (docklet-494): adds `read_docket` / `edit_docket` mirroring the FS Read/Edit tool pair, with daemon-side read-before-edit gate.
