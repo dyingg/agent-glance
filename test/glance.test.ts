@@ -76,6 +76,9 @@ describe("Glance", () => {
       clickThrough: true,
       floating: true,
       noDock: true,
+      fadeOnHover: true,
+      fadeOnHoverOpacity: 0,
+      fadeOnHoverDuration: 0.16,
     });
   });
 

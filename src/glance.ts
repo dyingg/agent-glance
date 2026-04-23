@@ -46,6 +46,7 @@ const HUD_WIDTH = 480;
 const HUD_HEIGHT = 400;
 const MARGIN = 20;
 const DEFAULT_PROBE_TIMEOUT_MS = 3000;
+const HOVER_FADE_DURATION_SECONDS = 0.16;
 
 /**
  * Options to merge into the glimpse `open()` call to realise an anchor.
@@ -241,6 +242,9 @@ export function createGlance(opts: GlanceOptions = {}): Glance {
       clickThrough: true,
       floating: true,
       noDock: true,
+      fadeOnHover: true,
+      fadeOnHoverOpacity: 0,
+      fadeOnHoverDuration: HOVER_FADE_DURATION_SECONDS,
       ...positionFor(anchor, d),
     };
     if (title !== undefined) options.title = title;
