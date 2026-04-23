@@ -1,12 +1,12 @@
-// Manual smoke test for clawd-docklet.
+// Manual smoke test for agent-glance.
 //
 // Spawns the adapter over stdio, lists tools, then drives the shared HUD
-// through the full write_docket / read_docket / edit_docket / hide_docket
+// through the full write_glance / read_glance / edit_glance / hide_glance
 // surface to prove the whole chain (MCP → adapter → daemon → glimpse) works
 // end-to-end with a real window.
 //
-// The edit_docket segment in particular demonstrates the token-efficient
-// patching model: after one write_docket, a handful of small edit_docket
+// The edit_glance segment in particular demonstrates the token-efficient
+// patching model: after one write_glance, a handful of small edit_glance
 // calls animate a progress bar in place without re-sending the full HTML.
 //
 // Run:   npm run smoke
@@ -28,12 +28,12 @@ const HELLO = `<body style="margin:0;background:transparent">
               background:rgba(20,150,250,0.92);color:white;
               font:600 14px system-ui;
               box-shadow:0 6px 30px rgba(0,0,0,0.3)">
-    👋 hello from write_docket
+    👋 hello from write_glance
   </div>
 </body>`;
 
 // The progress card uses unique marker substrings (width:X%; and X% · step Y/4)
-// so later edit_docket calls can patch them without ambiguity.
+// so later edit_glance calls can patch them without ambiguity.
 const PROGRESS = `<body style="margin:0;background:transparent">
   <div style="position:fixed;top:20px;right:20px;width:280px;
               padding:14px 18px;border-radius:14px;
@@ -61,7 +61,10 @@ async function main() {
     args: [ENTRY],
     env: process.env,
   });
-  const client = new Client({ name: "docklet-smoke", version: "0.0.1" }, { capabilities: {} });
+  const client = new Client(
+    { name: "agent-glance-smoke", version: "0.0.1" },
+    { capabilities: {} }
+  );
 
   console.log("→ connecting adapter…");
   await client.connect(transport);
@@ -78,60 +81,76 @@ async function main() {
     return res;
   };
 
-  console.log("\n── 1. write_docket(hello) ──  (blue pill, 2s)");
-  await call("write_docket", { html: HELLO, title: "hello" });
-  await sleep(2000);
+  // console.log("\n── 1. write_glance(hello) ──  (blue pill, 2s)");
+  // await call("write_glance", { html: HELLO, title: "hello" });
+  // await sleep(2000);
 
-  console.log("\n── 2. write_docket(progress @ 0%) ──  (progress card appears)");
-  await call("write_docket", { html: PROGRESS, title: "building" });
-  await sleep(1200);
+  // console.log("\n── 2. write_glance(progress @ 0%) ──  (progress card appears)");
+  // await call("write_glance", { html: PROGRESS, title: "building" });
+  // await sleep(1200);
 
-  console.log("\n── 3. read_docket ──  (arms this client for edit_docket)");
-  const read = await call("read_docket");
-  console.log(`   HUD is ${read.content?.[0]?.text?.length ?? 0} chars of HTML`);
+  // console.log("\n── 3. read_glance ──  (arms this client for edit_glance)");
+  // const read = await call("read_glance");
+  // console.log(`   HUD is ${read.content?.[0]?.text?.length ?? 0} chars of HTML`);
 
-  console.log("\n── 4. edit_docket: bump progress 0% → 33%, label → Building ──");
-  await call("edit_docket", { old_string: "width:0%;", new_string: "width:33%;" });
-  await call("edit_docket", { old_string: "0% · step 0/4", new_string: "33% · step 1/4" });
-  await call("edit_docket", { old_string: "Starting…", new_string: "Building…" });
-  await sleep(1000);
+  // console.log("\n── 4. edit_glance: bump progress 0% → 33%, label → Building ──");
+  // await call("edit_glance", { old_string: "width:0%;", new_string: "width:33%;" });
+  // await call("edit_glance", { old_string: "0% · step 0/4", new_string: "33% · step 1/4" });
+  // await call("edit_glance", { old_string: "Starting…", new_string: "Building…" });
+  // await sleep(1000);
 
-  console.log("\n── 5. edit_docket: 33% → 66% (step 2/4) ──");
-  await call("edit_docket", { old_string: "width:33%;", new_string: "width:66%;" });
-  await call("edit_docket", { old_string: "33% · step 1/4", new_string: "66% · step 2/4" });
-  await sleep(1000);
+  // console.log("\n── 5. edit_glance: 33% → 66% (step 2/4) ──");
+  // await call("edit_glance", { old_string: "width:33%;", new_string: "width:66%;" });
+  // await call("edit_glance", { old_string: "33% · step 1/4", new_string: "66% · step 2/4" });
+  // await sleep(1000);
 
-  console.log("\n── 6. edit_docket: 66% → 100%, label → Done ──");
-  await call("edit_docket", { old_string: "width:66%;", new_string: "width:100%;" });
-  await call("edit_docket", { old_string: "66% · step 2/4", new_string: "100% · step 4/4" });
-  await call("edit_docket", { old_string: "Building…", new_string: "✅ Done" });
-  await call("edit_docket", { old_string: "#fbbf24", new_string: "#34c759" }); // dot: amber → green
-  await sleep(2000);
+  // console.log("\n── 6. edit_glance: 66% → 100%, label → Done ──");
+  // await call("edit_glance", { old_string: "width:66%;", new_string: "width:100%;" });
+  // await call("edit_glance", { old_string: "66% · step 2/4", new_string: "100% · step 4/4" });
+  // await call("edit_glance", { old_string: "Building…", new_string: "✅ Done" });
+  // await call("edit_glance", { old_string: "#fbbf24", new_string: "#34c759" }); // dot: amber → green
+  // await sleep(2000);
 
-  console.log("\n── 7. edit_docket WITHOUT prior read fails ──");
-  //  Demonstrate the read-before-edit gate. write_docket invalidates the
-  //  previous lastRead version; we skip read_docket on purpose here.
-  await call("write_docket", { html: PROGRESS, title: "reset" });
-  const staleRes = await call("edit_docket", {
-    old_string: "width:0%;",
-    new_string: "width:50%;",
-  });
-  if (!staleRes.isError) {
-    console.error("!! expected isError=true from edit without prior read");
-    process.exitCode = 1;
-  }
+  // console.log("\n── 7. edit_glance WITHOUT prior read fails ──");
+  // //  Demonstrate the read-before-edit gate. write_glance invalidates the
+  // //  previous lastRead version; we skip read_glance on purpose here.
+  // await call("write_glance", { html: PROGRESS, title: "reset" });
+  // const staleRes = await call("edit_glance", {
+  //   old_string: "width:0%;",
+  //   new_string: "width:50%;",
+  // });
+  // if (!staleRes.isError) {
+  //   console.error("!! expected isError=true from edit without prior read");
+  //   process.exitCode = 1;
+  // }
 
-  console.log("\n── 8. hide_docket ──  (window closes, 1s)");
-  await call("hide_docket");
-  await sleep(1000);
+  // console.log("\n── 8. hide_glance ──  (window closes, 1s)");
+  // await call("hide_glance");
+  // await sleep(1000);
 
-  console.log("\n── 9. write_docket(hello) ──  (reopens fast, cached probe)");
-  await call("write_docket", { html: HELLO, title: "back" });
-  await sleep(2000);
+  // console.log("\n── 9. write_glance(hello) ──  (reopens fast, cached probe)");
+  // await call("write_glance", { html: HELLO, title: "back" });
+  // await sleep(2000);
+
+  console.log(
+    "\n── 10. write_glance(boundary fill) ──  (solid colour fills the full glance box)"
+  );
+  const BOUNDARY = `<body style="margin:0;padding:0;background:#ef4444;
+                                 width:100vw;height:100vh;
+                                 display:flex;align-items:center;justify-content:center;
+                                 font:700 15px system-ui;color:white;
+                                 box-sizing:border-box;border:4px dashed rgba(255,255,255,0.6)">
+    boundary box
+  </body>`;
+  await call("write_glance", { html: BOUNDARY, title: "boundary" });
+  await sleep(3000);
 
   console.log("\n── closing ──");
   await client.close();
   console.log("✓ done");
 }
 
-main().catch((e) => { console.error(e); process.exit(1); });
+main().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});
