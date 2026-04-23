@@ -8,7 +8,8 @@
     "agent-glance": "dist/index.js"
   },
   "files": [
-    "dist"
+    "dist",
+    "scripts"
   ],
   "engines": {
     "node": ">=18"
@@ -18,7 +19,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "prepare": "npm run build",
-    "postinstall": "patch-package",
+    "postinstall": "node scripts/apply-glimpseui-patch.mjs",
     "prepublishOnly": "npm run build && npm test",
     "daemon": "npm run build && AGENT_GLANCE_ROLE=daemon AGENT_GLANCE_IDLE_MS=0 node ./dist/index.js",
     "smoke": "npm run build && node ./examples/mcp-smoke.mjs"
