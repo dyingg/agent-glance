@@ -92,13 +92,13 @@ export class DaemonClient {
   }
 }
 
-export function registerDocketShow(mcp: McpServer, daemon: Pick<DaemonClient, "request">) {
+export function registerDocketTools(mcp: McpServer, daemon: Pick<DaemonClient, "request">) {
   mcp.registerTool(
-    "docket_show",
+    "set_docket",
     {
-      title: "Show HTML in Docklet window",
+      title: "Set HTML in Docklet HUD",
       description:
-        "Render the given HTML in the shared Docklet (glimpse) window. Multiple MCP clients share a single window owned by the daemon.",
+        "Render the given HTML in the shared Docklet HUD window (top-right of the screen, frameless, transparent, clickthrough). Multiple MCP clients share a single window owned by the daemon; each call replaces the previous HTML.",
       inputSchema: {
         html: z.string().describe("HTML document or fragment to render."),
         title: z.string().optional().describe("Optional window title."),
@@ -106,6 +106,20 @@ export function registerDocketShow(mcp: McpServer, daemon: Pick<DaemonClient, "r
     },
     async ({ html, title }) => {
       await daemon.request("show", { html, title });
+      return { content: [{ type: "text", text: "ok" }] };
+    },
+  );
+
+  mcp.registerTool(
+    "hide_docket",
+    {
+      title: "Hide the Docklet HUD",
+      description:
+        "Close the shared Docklet HUD window. A subsequent `set_docket` will reopen it.",
+      inputSchema: {},
+    },
+    async () => {
+      await daemon.request("hide", {});
       return { content: [{ type: "text", text: "ok" }] };
     },
   );
@@ -117,7 +131,7 @@ export async function runAdapterMain() {
   const daemon = new DaemonClient(daemonSock);
 
   const mcp = new McpServer({ name: "clawd-docklet", version: "0.0.1" });
-  registerDocketShow(mcp, daemon);
+  registerDocketTools(mcp, daemon);
 
   const cleanup = () => {
     daemon.close();

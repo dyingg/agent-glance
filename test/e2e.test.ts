@@ -12,7 +12,10 @@ describe("end-to-end MCP over stdio", () => {
   let env: FreshEnv;
 
   beforeEach(() => {
-    env = freshEnv({ CLAWD_DOCKLET_IDLE_MS: "300" });
+    env = freshEnv({
+      CLAWD_DOCKLET_IDLE_MS: "300",
+      CLAWD_DOCKLET_DOCKET_DISABLED: "1",
+    });
   });
 
   afterEach(async () => {
@@ -26,7 +29,7 @@ describe("end-to-end MCP over stdio", () => {
     cleanupEnv(env);
   });
 
-  test("initialize handshake advertises docket_show tool", async () => {
+  test("initialize handshake advertises set_docket and hide_docket tools", async () => {
     const transport = new StdioClientTransport({
       command: process.execPath,
       args: [ENTRY],
@@ -44,12 +47,13 @@ describe("end-to-end MCP over stdio", () => {
 
     const { tools } = await client.listTools();
     const names = tools.map((t) => t.name);
-    expect(names).toContain("docket_show");
+    expect(names).toEqual(expect.arrayContaining(["set_docket", "hide_docket"]));
+    expect(names).not.toContain("docket_show");
 
     await client.close();
   });
 
-  test("calling docket_show forwards to the daemon and returns ok", async () => {
+  test("calling set_docket forwards to the daemon and returns ok", async () => {
     const transport = new StdioClientTransport({
       command: process.execPath,
       args: [ENTRY],
@@ -59,12 +63,32 @@ describe("end-to-end MCP over stdio", () => {
     await client.connect(transport);
 
     const result = await client.callTool({
-      name: "docket_show",
+      name: "set_docket",
       arguments: { html: "<h1>hello</h1>", title: "greet" },
     });
     expect(result.isError).toBeFalsy();
     const content = result.content as Array<{ type: string; text?: string }>;
     expect(content[0]?.type).toBe("text");
+    expect(content[0]?.text).toBe("ok");
+
+    await client.close();
+  });
+
+  test("calling hide_docket forwards to the daemon and returns ok", async () => {
+    const transport = new StdioClientTransport({
+      command: process.execPath,
+      args: [ENTRY],
+      env: env as NodeJS.ProcessEnv as Record<string, string>,
+    });
+    const client = new Client({ name: "test", version: "0.0.0" }, { capabilities: {} });
+    await client.connect(transport);
+
+    const result = await client.callTool({
+      name: "hide_docket",
+      arguments: {},
+    });
+    expect(result.isError).toBeFalsy();
+    const content = result.content as Array<{ type: string; text?: string }>;
     expect(content[0]?.text).toBe("ok");
 
     await client.close();
