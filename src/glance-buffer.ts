@@ -14,12 +14,12 @@ export type EditResultErr = {
 };
 export type EditResult = EditResultOk | EditResultErr;
 
-export interface DocketBufferOptions {
+export interface GlanceBufferOptions {
   initialHtml?: string;
   onChange?: (html: string) => void | Promise<void>;
 }
 
-export interface DocketBuffer {
+export interface GlanceBuffer {
   getVersion(): number;
   read(clientId: ClientId): { html: string; version: number };
   write(html: string): number;
@@ -28,7 +28,7 @@ export interface DocketBuffer {
   forgetClient(clientId: ClientId): void;
 }
 
-export function createDocketBuffer(opts: DocketBufferOptions = {}): DocketBuffer {
+export function createGlanceBuffer(opts: GlanceBufferOptions = {}): GlanceBuffer {
   let html = opts.initialHtml ?? "";
   let version = 0;
   const lastRead = new Map<ClientId, number>();
@@ -72,14 +72,14 @@ export function createDocketBuffer(opts: DocketBufferOptions = {}): DocketBuffer
         return {
           ok: false,
           code: "MustReadFirst",
-          message: "Call read_docket before edit_docket.",
+          message: "Call read_glance before edit_glance.",
         };
       }
       if (seen < version) {
         return {
           ok: false,
           code: "StaleRead",
-          message: "Docket was modified since your last read. Call read_docket again and retry.",
+          message: "Glance was modified since your last read. Call read_glance again and retry.",
         };
       }
 
@@ -98,7 +98,7 @@ export function createDocketBuffer(opts: DocketBufferOptions = {}): DocketBuffer
         return {
           ok: false,
           code: "NoMatch",
-          message: "old_string not found in current docket.",
+          message: "old_string not found in current glance.",
         };
       }
 

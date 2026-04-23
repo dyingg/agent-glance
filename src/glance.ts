@@ -2,7 +2,7 @@ import type { Anchor } from "./config.js";
 
 export type HudMode = "always" | "lazy";
 
-/** Subset of glimpseui's GlimpseWindow that Docket touches. */
+/** Subset of glimpseui's GlimpseWindow that Glance touches. */
 export type GWindow = {
   setHTML: (html: string) => void;
   close: () => void;
@@ -15,7 +15,7 @@ export type GlimpseOpen = (
   options: Record<string, unknown>
 ) => GWindow;
 
-export interface DocketOptions {
+export interface GlanceOptions {
   /** Injected glimpseui.open (for tests). Defaults to the real module loaded lazily. */
   open?: GlimpseOpen;
   /** When true, show/hide/close are no-ops. Used by tests and CI. */
@@ -26,7 +26,7 @@ export interface DocketOptions {
   anchor?: Anchor;
 }
 
-export interface Docket {
+export interface Glance {
   show(html: string, title?: string): Promise<void>;
   /** Render the built-in placeholder chip, pinned to the current anchor corner. */
   showPlaceholder(): Promise<void>;
@@ -111,7 +111,7 @@ export function renderPlaceholderHtml(anchor: Anchor): string {
               font-size:12px;color:#fff;">
     <span style="width:8px;height:8px;border-radius:50%;background:#34c759;
                  box-shadow:0 0 6px rgba(52,199,89,0.6)"></span>
-    clawd-docklet
+    agent-glance
   </div>
 </body>`;
 }
@@ -123,7 +123,7 @@ async function loadGlimpseOpen(): Promise<GlimpseOpen> {
   return mod.open;
 }
 
-export function createDocket(opts: DocketOptions = {}): Docket {
+export function createGlance(opts: GlanceOptions = {}): Glance {
   const disabled = opts.disabled === true;
   const probeTimeoutMs = opts.probeTimeoutMs ?? DEFAULT_PROBE_TIMEOUT_MS;
   let openFn: GlimpseOpen | null = opts.open ?? null;
@@ -166,7 +166,7 @@ export function createDocket(opts: DocketOptions = {}): Docket {
             /* ignore */
           }
           reject(
-            new Error(`docket: probe timed out after ${probeTimeoutMs}ms`)
+            new Error(`glance: probe timed out after ${probeTimeoutMs}ms`)
           );
         }, probeTimeoutMs);
         probeWin.once("ready", (...args: unknown[]) => {
@@ -193,7 +193,7 @@ export function createDocket(opts: DocketOptions = {}): Docket {
           if (!width || !height) {
             reject(
               new Error(
-                `docket: probe returned invalid dims (${width}×${height})`
+                `glance: probe returned invalid dims (${width}×${height})`
               )
             );
             return;

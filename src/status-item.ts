@@ -127,7 +127,7 @@ export function renderPopoverHtml(selected: Anchor): string {
   }
 </style>
 <body>
-  <div class="header">Docket anchor</div>
+  <div class="header">Glance anchor</div>
   <ul id="anchors">
     <li tabindex="0" data-anchor="top-right"><span class="mark">✓</span><span class="label">Top-right</span></li>
     <li tabindex="0" data-anchor="top-left"><span class="mark">✓</span><span class="label">Top-left</span></li>
@@ -137,7 +137,7 @@ export function renderPopoverHtml(selected: Anchor): string {
   </ul>
   <div class="sep"></div>
   <ul>
-    <li tabindex="0" id="hide"><span class="mark"></span><span class="label">Hide Glimpse</span></li>
+    <li tabindex="0" id="hide"><span class="mark"></span><span class="label">Hide Glance</span></li>
   </ul>
   <script>
     (function () {

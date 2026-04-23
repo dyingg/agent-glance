@@ -2,7 +2,7 @@
 import { runAdapterMain } from "./adapter.js";
 import { runDaemonMain } from "./daemon.js";
 
-const role = process.env.CLAWD_DOCKLET_ROLE;
+const role = process.env.AGENT_GLANCE_ROLE;
 
 if (role === "daemon") {
   runDaemonMain().catch((err) => {

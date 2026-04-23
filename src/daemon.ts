@@ -4,8 +4,8 @@ import { dirname } from "node:path";
 import { platform } from "node:os";
 import { encode, LineDecoder, type Frame, type ReqFrame } from "./protocol.js";
 import { resolvePaths, type Paths } from "./paths.js";
-import { createDocket, renderPlaceholderHtml, type Docket } from "./docket.js";
-import { createDocketBuffer, type DocketBuffer, type EditParams } from "./docket-buffer.js";
+import { createGlance, renderPlaceholderHtml } from "./glance.js";
+import { createGlanceBuffer, type GlanceBuffer, type EditParams } from "./glance-buffer.js";
 import { readConfig, writeConfig, type Anchor } from "./config.js";
 import { createStatusItem, type StatusItem } from "./status-item.js";
 
@@ -126,9 +126,9 @@ function cryptoRandom(): string {
 
 export type WriteParams = { html: string; title?: string };
 
-export function registerDocketHandlers(
+export function registerGlanceHandlers(
   daemon: Pick<Daemon, "onRequest" | "onConnectionClose">,
-  buffer: DocketBuffer,
+  buffer: GlanceBuffer,
 ) {
   daemon.onRequest("write", async (params) => {
     const p = params as Partial<WriteParams> | null;
@@ -177,33 +177,33 @@ export async function runDaemonMain() {
   try {
     const daemon = await startDaemon(paths);
     const initialConfig = await readConfig(paths.configPath);
-    const docket = createDocket({
-      disabled: paths.docketDisabled,
+    const glance = createGlance({
+      disabled: paths.hudDisabled,
       anchor: initialConfig.anchor,
     });
-    const buffer = createDocketBuffer({
+    const buffer = createGlanceBuffer({
       initialHtml:
         paths.hudMode === "always"
           ? renderPlaceholderHtml(initialConfig.anchor)
           : "",
       onChange: (html) => {
-        if (paths.docketDisabled) return;
-        const p = html === "" ? docket.hide() : docket.show(html);
-        p.catch((err) => console.error("docket: render failed:", err));
+        if (paths.hudDisabled) return;
+        const p = html === "" ? glance.hide() : glance.show(html);
+        p.catch((err) => console.error("glance: render failed:", err));
       },
     });
-    registerDocketHandlers(daemon, buffer);
-    if (paths.hudMode === "always" && !paths.docketDisabled) {
+    registerGlanceHandlers(daemon, buffer);
+    if (paths.hudMode === "always" && !paths.hudDisabled) {
       // Render the placeholder once on startup — buffer holds it at version 0
-      // so the next read_docket returns it, but onChange doesn't fire until a
+      // so the next read_glance returns it, but onChange doesn't fire until a
       // mutation, so we render directly here. Use showPlaceholder so the chip
       // re-anchors if the user switches corners via the status item.
-      docket.showPlaceholder().catch((err) => {
-        console.error("docket: initial placeholder failed:", err);
+      glance.showPlaceholder().catch((err) => {
+        console.error("glance: initial placeholder failed:", err);
       });
     }
     let statusItem: StatusItem | null = null;
-    if (!paths.statusDisabled && !paths.docketDisabled) {
+    if (!paths.statusDisabled && !paths.hudDisabled) {
       statusItem = createStatusItem({
         initialAnchor: initialConfig.anchor,
         onAnchor: async (anchor: Anchor) => {
@@ -213,13 +213,13 @@ export async function runDaemonMain() {
             console.error("status-item: failed to persist anchor:", err);
           }
           try {
-            await docket.setAnchor(anchor);
+            await glance.setAnchor(anchor);
           } catch (err) {
             console.error("status-item: failed to apply anchor:", err);
           }
         },
         onHide: () => {
-          docket.hide().catch((err) =>
+          glance.hide().catch((err) =>
             console.error("status-item: hide failed:", err),
           );
         },
@@ -230,7 +230,7 @@ export async function runDaemonMain() {
       if (shuttingDown) return;
       shuttingDown = true;
       try { statusItem?.close(); } catch { /* ignore */ }
-      try { await docket.close(); } catch { /* ignore */ }
+      try { await glance.close(); } catch { /* ignore */ }
       try { await daemon.close(); } catch { /* ignore */ }
       process.exit(0);
     };
