@@ -11,7 +11,9 @@
 
 Give the daemon a long-lived visual surface — a transparent, frameless, clickthrough HUD in the top-right corner — that agents can drive over MCP. This is the first real use of glimpseui in the project and validates the "daemon owns shared UI across sessions" premise of the shell design.
 
-The surface is a canvas: whatever HTML a client passes is what shows. There is no interaction contract (clickthrough stays on), no fixed content schema, and no embedded widgets. Name "docket" is provisional and may change later ("HUD" is a more accurate description of the current shape).
+The surface is a **full web view** (Chromium/WebKit via glimpseui): whatever HTML a client passes is what shows, and that HTML can include `<script>`, `<style>`, CSS animations, `fetch`, `setTimeout`, canvas/SVG — the same primitives as a browser page. There is no input-interaction contract (clickthrough stays on, so pointer/keyboard events don't reach the page), no fixed content schema, and no embedded widgets. Name "docket" is provisional and may change later ("HUD" is a more accurate description of the current shape).
+
+Tool descriptions (`write_docket`, `read_docket`, `edit_docket`) surface the web-view nature + the 480×400 viewport so agents know what primitives are available and what bounds to respect.
 
 ## 2. Architecture
 
