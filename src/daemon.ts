@@ -111,13 +111,28 @@ function cryptoRandom(): string {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
 
+export type ShowParams = { html: string; title?: string };
+
+export function registerShowHandler(daemon: Pick<Daemon, "onRequest">) {
+  daemon.onRequest("show", async (params) => {
+    const p = params as Partial<ShowParams> | null;
+    if (!p || typeof p.html !== "string") {
+      throw new Error("show: 'html' must be a string");
+    }
+    if (p.title !== undefined && typeof p.title !== "string") {
+      throw new Error("show: 'title' must be a string when provided");
+    }
+    // Daemon→glimpse wiring lands in a later change. Payload is accepted here.
+    return { ok: true };
+  });
+}
+
 export async function runDaemonMain() {
   const paths = resolvePaths();
   try {
     const daemon = await startDaemon(paths);
-    // Shell stage: no handlers registered. Adapter-initiated "ping" gets a -32601.
-    // Real MCP dispatch comes when tools land.
     daemon.onRequest("ping", async () => ({ ok: true }));
+    registerShowHandler(daemon);
   } catch (err) {
     const e = err as NodeJS.ErrnoException;
     if (e.code === "EADDRINUSE") {

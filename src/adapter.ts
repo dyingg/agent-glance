@@ -3,6 +3,7 @@ import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { z } from "zod";
 import { encode, LineDecoder, type Frame } from "./protocol.js";
 import { resolvePaths, type Paths } from "./paths.js";
 
@@ -91,19 +92,32 @@ export class DaemonClient {
   }
 }
 
+export function registerDocketShow(mcp: McpServer, daemon: Pick<DaemonClient, "request">) {
+  mcp.registerTool(
+    "docket_show",
+    {
+      title: "Show HTML in Docklet window",
+      description:
+        "Render the given HTML in the shared Docklet (glimpse) window. Multiple MCP clients share a single window owned by the daemon.",
+      inputSchema: {
+        html: z.string().describe("HTML document or fragment to render."),
+        title: z.string().optional().describe("Optional window title."),
+      },
+    },
+    async ({ html, title }) => {
+      await daemon.request("show", { html, title });
+      return { content: [{ type: "text", text: "ok" }] };
+    },
+  );
+}
+
 export async function runAdapterMain() {
   const paths = resolvePaths();
   const daemonSock = await getOrSpawnDaemon(paths);
   const daemon = new DaemonClient(daemonSock);
 
-  // McpServer auto-registers tools/list and the `tools` capability the first
-  // time registerTool() is called. With no tools registered, the server
-  // advertises no capabilities — which is correct for the shell stage.
   const mcp = new McpServer({ name: "clawd-docklet", version: "0.0.1" });
-
-  // Keep the daemon warm while this adapter is connected.
-  // Future: route tools/call here through daemon.request(...).
-  void daemon;
+  registerDocketShow(mcp, daemon);
 
   const cleanup = () => {
     daemon.close();

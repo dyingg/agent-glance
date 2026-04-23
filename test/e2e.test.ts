@@ -26,7 +26,7 @@ describe("end-to-end MCP over stdio", () => {
     cleanupEnv(env);
   });
 
-  test("initialize handshake succeeds and no tool capability is advertised", async () => {
+  test("initialize handshake advertises docket_show tool", async () => {
     const transport = new StdioClientTransport({
       command: process.execPath,
       args: [ENTRY],
@@ -39,10 +39,33 @@ describe("end-to-end MCP over stdio", () => {
     expect(info?.name).toBe("clawd-docklet");
     expect(info?.version).toBe("0.0.1");
 
-    // No tools are registered yet, so the server shouldn't advertise the
-    // tools capability. Once registerTool() is called, McpServer wires it up.
     const caps = client.getServerCapabilities();
-    expect(caps?.tools).toBeUndefined();
+    expect(caps?.tools).toBeDefined();
+
+    const { tools } = await client.listTools();
+    const names = tools.map((t) => t.name);
+    expect(names).toContain("docket_show");
+
+    await client.close();
+  });
+
+  test("calling docket_show forwards to the daemon and returns ok", async () => {
+    const transport = new StdioClientTransport({
+      command: process.execPath,
+      args: [ENTRY],
+      env: env as NodeJS.ProcessEnv as Record<string, string>,
+    });
+    const client = new Client({ name: "test", version: "0.0.0" }, { capabilities: {} });
+    await client.connect(transport);
+
+    const result = await client.callTool({
+      name: "docket_show",
+      arguments: { html: "<h1>hello</h1>", title: "greet" },
+    });
+    expect(result.isError).toBeFalsy();
+    const content = result.content as Array<{ type: string; text?: string }>;
+    expect(content[0]?.type).toBe("text");
+    expect(content[0]?.text).toBe("ok");
 
     await client.close();
   });
