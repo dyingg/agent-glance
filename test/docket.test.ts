@@ -1,6 +1,10 @@
 import { EventEmitter } from "node:events";
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { createDocket, PLACEHOLDER_HTML, type DocketOptions } from "../src/docket.js";
+import {
+  createDocket,
+  renderPlaceholderHtml,
+  type DocketOptions,
+} from "../src/docket.js";
 
 /** Minimal fake that mirrors the subset of GlimpseWindow the Docket uses. */
 class FakeWindow extends EventEmitter {
@@ -180,9 +184,45 @@ describe("Docket", () => {
     expect(windows).toHaveLength(0);
   });
 
-  test("PLACEHOLDER_HTML is a non-empty html snippet", () => {
-    expect(typeof PLACEHOLDER_HTML).toBe("string");
-    expect(PLACEHOLDER_HTML).toMatch(/<body/i);
+  test("renderPlaceholderHtml pins the chip to the matching corner", () => {
+    expect(renderPlaceholderHtml("top-right")).toMatch(
+      /position:fixed;top:20px;right:20px/
+    );
+    expect(renderPlaceholderHtml("top-left")).toMatch(
+      /position:fixed;top:20px;left:20px/
+    );
+    expect(renderPlaceholderHtml("bottom-right")).toMatch(
+      /position:fixed;bottom:20px;right:20px/
+    );
+    expect(renderPlaceholderHtml("bottom-left")).toMatch(
+      /position:fixed;bottom:20px;left:20px/
+    );
+    // follow-cursor: window moves; default the chip to top-right of the pane.
+    expect(renderPlaceholderHtml("follow-cursor")).toMatch(
+      /position:fixed;top:20px;right:20px/
+    );
+  });
+
+  test("showPlaceholder uses the current anchor; setAnchor re-renders it", async () => {
+    const { open, windows } = makeOpen((w) => {
+      if (windows.length === 1) fireReady(w, 1440, 900);
+    });
+    const docket = createDocket({ open, anchor: "top-right" });
+
+    await docket.showPlaceholder();
+    expect(windows).toHaveLength(2);
+    expect(windows[1].openArgs.html).toMatch(
+      /position:fixed;top:20px;right:20px/
+    );
+
+    await docket.setAnchor("top-left");
+    // setAnchor closes the window and reopens at the new corner — new window
+    // is windows[2]; its HTML is the re-rendered placeholder, not the stale
+    // top-right one.
+    expect(windows).toHaveLength(3);
+    expect(windows[2].openArgs.html).toMatch(
+      /position:fixed;top:20px;left:20px/
+    );
   });
 
   test("initial anchor top-left lands the HUD at left edge", async () => {

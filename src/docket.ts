@@ -28,6 +28,8 @@ export interface DocketOptions {
 
 export interface Docket {
   show(html: string, title?: string): Promise<void>;
+  /** Render the built-in placeholder chip, pinned to the current anchor corner. */
+  showPlaceholder(): Promise<void>;
   hide(): Promise<void>;
   close(): Promise<void>;
   setAnchor(anchor: Anchor): Promise<void>;
@@ -75,10 +77,30 @@ export function positionFor(
   }
 }
 
-export const PLACEHOLDER_HTML = `<!doctype html>
+/**
+ * Build the CSS edges ("top:20px;right:20px" etc.) that pin the placeholder
+ * chip to the same screen-corner the window is anchored to. For follow-cursor
+ * we fall back to top-right — the window moves, so internal corner is moot.
+ */
+function placeholderEdgesFor(anchor: Anchor): string {
+  switch (anchor) {
+    case "top-left":
+      return "top:20px;left:20px;";
+    case "bottom-right":
+      return "bottom:20px;right:20px;";
+    case "bottom-left":
+      return "bottom:20px;left:20px;";
+    case "top-right":
+    case "follow-cursor":
+      return "top:20px;right:20px;";
+  }
+}
+
+export function renderPlaceholderHtml(anchor: Anchor): string {
+  return `<!doctype html>
 <meta name="color-scheme" content="light dark">
 <body style="background:transparent!important;margin:0;font-family:-apple-system,system-ui,sans-serif">
-  <div style="position:fixed;top:20px;right:20px;
+  <div style="position:fixed;${placeholderEdgesFor(anchor)}
               display:flex;align-items:center;gap:8px;
               padding:8px 14px;border-radius:999px;
               background:rgba(30,30,40,0.85);
@@ -92,6 +114,7 @@ export const PLACEHOLDER_HTML = `<!doctype html>
     clawd-docklet
   </div>
 </body>`;
+}
 
 async function loadGlimpseOpen(): Promise<GlimpseOpen> {
   // glimpseui ships .mjs without types; cast through unknown at the boundary.
@@ -231,30 +254,39 @@ export function createDocket(opts: DocketOptions = {}): Docket {
   let currentAnchor: Anchor = opts.anchor ?? "top-right";
   let lastHtml = "";
   let lastTitle: string | undefined;
+  // True iff the current `lastHtml` is the built-in placeholder; drives
+  // re-render on setAnchor so the chip follows the chosen corner.
+  let isPlaceholder = false;
+
+  async function showHtml(html: string, title?: string): Promise<void> {
+    if (disabled) return;
+    lastHtml = html;
+    lastTitle = title;
+    if (win) {
+      win.setHTML(html);
+      return;
+    }
+    const d = await probe();
+    if (win) {
+      (win as GWindow).setHTML(html);
+      return;
+    }
+    const open = openFn ?? (await getOpen());
+    if (win) {
+      (win as GWindow).setHTML(html);
+      return;
+    }
+    win = openReal(open, html, d, currentAnchor, title);
+  }
 
   return {
     async show(html: string, title?: string): Promise<void> {
-      if (disabled) return;
-      lastHtml = html;
-      lastTitle = title;
-      if (win) {
-        win.setHTML(html);
-        return;
-      }
-      const d = await probe();
-      // Another concurrent show() may have opened the window while we awaited.
-      if (win) {
-        (win as GWindow).setHTML(html);
-        return;
-      }
-      // probe() ensures openFn is cached; use it synchronously so concurrent
-      // post-probe resumes don't both open a real window.
-      const open = openFn ?? (await getOpen());
-      if (win) {
-        (win as GWindow).setHTML(html);
-        return;
-      }
-      win = openReal(open, html, d, currentAnchor, title);
+      isPlaceholder = false;
+      await showHtml(html, title);
+    },
+    async showPlaceholder(): Promise<void> {
+      isPlaceholder = true;
+      await showHtml(renderPlaceholderHtml(currentAnchor));
     },
     async hide(): Promise<void> {
       if (disabled) return;
@@ -285,9 +317,11 @@ export function createDocket(opts: DocketOptions = {}): Docket {
       // Close-and-reopen at the new position with the last rendered HTML.
       // glimpseui has no runtime "move" RPC and mixing its live
       // followCursor toggle with x/y repositioning adds states without a
-      // clear user win.
-      const html = lastHtml;
+      // clear user win. If we're showing the built-in placeholder, re-render
+      // it so the chip pins to the new corner instead of staying top-right.
+      const html = isPlaceholder ? renderPlaceholderHtml(anchor) : lastHtml;
       const title = lastTitle;
+      if (isPlaceholder) lastHtml = html;
       try {
         win.close();
       } catch {

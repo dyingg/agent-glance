@@ -4,7 +4,7 @@ import { dirname } from "node:path";
 import { platform } from "node:os";
 import { encode, LineDecoder, type Frame, type ReqFrame } from "./protocol.js";
 import { resolvePaths, type Paths } from "./paths.js";
-import { createDocket, PLACEHOLDER_HTML, type Docket } from "./docket.js";
+import { createDocket, renderPlaceholderHtml, type Docket } from "./docket.js";
 import { createDocketBuffer, type DocketBuffer, type EditParams } from "./docket-buffer.js";
 import { readConfig, writeConfig, type Anchor } from "./config.js";
 import { createStatusItem, type StatusItem } from "./status-item.js";
@@ -182,7 +182,10 @@ export async function runDaemonMain() {
       anchor: initialConfig.anchor,
     });
     const buffer = createDocketBuffer({
-      initialHtml: paths.hudMode === "always" ? PLACEHOLDER_HTML : "",
+      initialHtml:
+        paths.hudMode === "always"
+          ? renderPlaceholderHtml(initialConfig.anchor)
+          : "",
       onChange: (html) => {
         if (paths.docketDisabled) return;
         const p = html === "" ? docket.hide() : docket.show(html);
@@ -193,8 +196,9 @@ export async function runDaemonMain() {
     if (paths.hudMode === "always" && !paths.docketDisabled) {
       // Render the placeholder once on startup — buffer holds it at version 0
       // so the next read_docket returns it, but onChange doesn't fire until a
-      // mutation, so we render directly here.
-      docket.show(PLACEHOLDER_HTML).catch((err) => {
+      // mutation, so we render directly here. Use showPlaceholder so the chip
+      // re-anchors if the user switches corners via the status item.
+      docket.showPlaceholder().catch((err) => {
         console.error("docket: initial placeholder failed:", err);
       });
     }
