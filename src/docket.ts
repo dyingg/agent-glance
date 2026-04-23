@@ -27,7 +27,7 @@ export interface Docket {
 
 type ScreenDims = { width: number; height: number };
 
-const HUD_WIDTH = 320;
+const HUD_WIDTH = 480;
 const HUD_HEIGHT = 400;
 const MARGIN = 20;
 const DEFAULT_PROBE_TIMEOUT_MS = 3000;

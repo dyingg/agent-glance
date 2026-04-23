@@ -98,7 +98,7 @@ export function registerDocketTools(mcp: McpServer, daemon: Pick<DaemonClient, "
     {
       title: "Write HTML to the Docklet HUD",
       description:
-        "Render the given HTML in the shared Docklet HUD window (top-right of the screen, frameless, transparent, clickthrough). Multiple MCP clients share a single window owned by the daemon; each call replaces the previous HTML.",
+        "Render the given HTML in the shared Docklet HUD window. The HUD viewport is 480×400 pixels, anchored ~20px from the top-right corner of the screen; content outside that viewport is clipped. The window is frameless, transparent, and clickthrough — design HTML with a transparent/translucent background and place visible elements within the 480×400 bounds. Multiple MCP clients share a single window owned by the daemon; each call replaces the previous HTML.",
       inputSchema: {
         html: z.string().describe("HTML document or fragment to render."),
         title: z.string().optional().describe("Optional window title."),
@@ -129,7 +129,7 @@ export function registerDocketTools(mcp: McpServer, daemon: Pick<DaemonClient, "
     {
       title: "Read current Docklet HUD HTML",
       description:
-        "Return the HTML currently rendered in the shared Docklet HUD. You must call this before `edit_docket` — the daemon tracks your last-read version and rejects stale edits. Returns an empty string if the HUD has never been written or was hidden.",
+        "Return the HTML currently rendered in the shared Docklet HUD (480×400 viewport, top-right of the screen). You must call this before `edit_docket` — the daemon tracks your last-read version and rejects stale edits. Returns an empty string if the HUD has never been written or was hidden.",
       inputSchema: {},
     },
     async () => {
@@ -143,7 +143,7 @@ export function registerDocketTools(mcp: McpServer, daemon: Pick<DaemonClient, "
     {
       title: "Patch the Docklet HUD HTML by exact string replacement",
       description:
-        "Replace `old_string` with `new_string` in the current HUD HTML. Mirrors the semantics of the `Edit` tool on files: `old_string` must match byte-for-byte (including whitespace) and must be unique unless `replace_all` is true. Requires a prior `read_docket` in this session — the daemon rejects edits that race ahead of the reader's view. Use `write_docket` for full-document replacement.",
+        "Replace `old_string` with `new_string` in the current HUD HTML. Mirrors the semantics of the `Edit` tool on files: `old_string` must match byte-for-byte (including whitespace) and must be unique unless `replace_all` is true. Requires a prior `read_docket` in this session — the daemon rejects edits that race ahead of the reader's view. Use `write_docket` for full-document replacement. The HUD viewport is 480×400 pixels (top-right of the screen); keep edited content within that bounds — overflow is clipped.",
       inputSchema: {
         old_string: z.string().describe("Exact text to replace. Must match byte-for-byte."),
         new_string: z.string().describe("Replacement text. Must differ from old_string."),

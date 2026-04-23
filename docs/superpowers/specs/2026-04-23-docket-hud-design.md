@@ -78,13 +78,13 @@ To land top-right accurately on any screen size, the daemon **probes once** at f
 2. Wait for the `ready` event; read `info.screen.visibleWidth` and `info.screen.visibleHeight`.
 3. Close the probe.
 4. Open the real HUD window at:
-   - `width: 320`, `height: 400`
-   - `x = visibleWidth - 320 - 20`
+   - `width: 480`, `height: 400`
+   - `x = visibleWidth - 480 - 20`
    - `y = visibleHeight - 400 - 20` (NSWindow origin is bottom-left on macOS; this puts the window ~20px from the top-right corner)
 
 Probe adds ~100–200ms to first-open (one-time — the cached screen dims are reused if the window is later closed and reopened within the same daemon lifetime).
 
-Size (320×400) is a starting point and likely to change; unused window area is transparent+clickthrough so oversizing costs nothing visually.
+Size (480×400) is a starting point and may change; unused window area is transparent+clickthrough so oversizing costs nothing visually. The viewport is surfaced in the `write_docket` / `edit_docket` / `read_docket` tool descriptions so agents can design HTML that fits.
 
 **Rejected alternatives:**
 - Hardcoded coordinates → wrong on external displays, wrong on non-Retina, etc.
@@ -97,7 +97,7 @@ Real HUD window:
 
 ```js
 open(html, {
-  width: 320, height: 400,
+  width: 480, height: 400,
   x, y,                    // computed from probe
   frameless: true,
   transparent: true,

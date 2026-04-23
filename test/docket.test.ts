@@ -60,12 +60,12 @@ describe("Docket", () => {
     });
     expect(windows[0].close).toHaveBeenCalledTimes(1);
 
-    // Real HUD: 320×400 anchored top-right from 1440×900.
+    // Real HUD: 480×400 anchored top-right from 1440×900.
     expect(windows[1].openArgs.html).toBe("<h1>hi</h1>");
     expect(windows[1].openArgs.options).toMatchObject({
-      width: 320,
+      width: 480,
       height: 400,
-      x: 1440 - 320 - 20,
+      x: 1440 - 480 - 20,
       y: 900 - 400 - 20,
       frameless: true,
       transparent: true,
@@ -128,9 +128,9 @@ describe("Docket", () => {
     // windows[2] = reopened HUD — no second probe.
     expect(windows).toHaveLength(3);
     expect(windows[2].openArgs.options).toMatchObject({
-      width: 320,
+      width: 480,
       height: 400,
-      x: 2000 - 320 - 20,
+      x: 2000 - 480 - 20,
       y: 1200 - 400 - 20,
     });
   });
